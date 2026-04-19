@@ -2,9 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>riskpilot</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#D4AF37" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="RiskPilot" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+    <!-- SEO -->
+    <meta name="description" content="XAUUSD risk calculator and discipline engine for Gold traders. Calculate lot size, track discipline score, stop blowing accounts." />
+    <meta name="keywords" content="forex, XAUUSD, gold trading, risk calculator, lot size, position sizing" />
+
+    <!-- Open Graph (for WhatsApp/Facebook link previews) -->
+    <meta property="og:title" content="RiskPilot — Gold Edition" />
+    <meta property="og:description" content="Stop blowing accounts. Calculate your exact XAUUSD lot size in seconds." />
+    <meta property="og:url" content="https://riskpilot-coral.vercel.app" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/icons/icon-512.png" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="RiskPilot — Gold Edition" />
+    <meta name="twitter:description" content="Stop blowing accounts. Free XAUUSD risk calculator for Gold traders." />
+
+    <title>RiskPilot — Gold Edition</title>
   </head>
   <body>
     <div id="root"></div>
