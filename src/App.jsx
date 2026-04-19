@@ -1,589 +1,142 @@
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "./lib/supabase";
+import { useState, useEffect } from 'react';
+import { supabase }   from './lib/supabaseClient';
+import Calculator     from './pages/Calculator';
+import Dashboard      from './pages/Dashboard';
+import './styles/globals.css';
 
-// ─── THEME ───────────────────────────────────────────────────────────────────
-const T = {
-  bg: "#0B0E13", surface: "#13181F", surfaceHigh: "#1A2130",
-  border: "#1E2D3D", borderHigh: "#2A3F55",
-  green: "#00D97E", greenDim: "#00D97E22",
-  amber: "#F5A623", amberDim: "#F5A62322",
-  red: "#FF4757", redDim: "#FF475722",
-  text: "#E8EDF3", textSub: "#7A8FA6", textMuted: "#3D5168",
-  font: "'IBM Plex Mono', monospace", fontSans: "'DM Sans', sans-serif",
-};
-
-const GLOBAL_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: ${T.bg}; color: ${T.text}; font-family: ${T.fontSans}; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: ${T.surface}; }
-::-webkit-scrollbar-thumb { background: ${T.borderHigh}; border-radius: 2px; }
-input, select, textarea { font-family: ${T.fontSans}; outline: none; }
-input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes flash { 0% { background: ${T.greenDim}; } 100% { background: transparent; } }
-@keyframes spin { to { transform: rotate(360deg); } }
-.fade-up { animation: fadeUp 0.35s ease forwards; }
-.result-flash { animation: flash 0.6s ease; }
-.spinner { animation: spin 0.8s linear infinite; }
-`;
-
-function injectStyles() {
-  if (document.getElementById("rp-styles")) return;
-  const s = document.createElement("style");
-  s.id = "rp-styles"; s.textContent = GLOBAL_CSS;
-  document.head.appendChild(s);
+function AuthInput({ type, value, onChange, placeholder, onKeyDown }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} onKeyDown={onKeyDown}
+      style={{ width:'100%', background:'var(--bg-3)', border:`1px solid ${focused?'var(--gold)':'var(--border)'}`, borderRadius:'var(--radius)', padding:'13px 14px', color:'var(--text)', fontSize:15, fontFamily:'var(--font-body)', outline:'none', transition:'all 0.2s', boxShadow:focused?'0 0 0 3px var(--gold-dim)':'none' }}
+      onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+  );
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-const fmt = (n, d = 2) => isNaN(n) || !isFinite(n) ? "—" : Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
-const fmtLots = (n) => isNaN(n) || !isFinite(n) ? "—" : Number(n).toFixed(2);
-
-const EMOTIONS = ["Confident", "Neutral", "Greedy", "Fearful", "FOMO", "Disciplined", "Revenge"];
-const EMOTION_COLORS = {
-  Confident: T.green, Neutral: T.textSub, Greedy: T.amber,
-  Fearful: "#A78BFA", FOMO: T.red, Disciplined: "#38BDF8", Revenge: "#FB7185",
-};
-
-// ─── UI PRIMITIVES ────────────────────────────────────────────────────────────
-const Label = ({ children }) => (
-  <div style={{ fontFamily: T.font, fontSize: 10, fontWeight: 600, color: T.textMuted, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
-    {children}
-  </div>
-);
-
-const Input = ({ value, onChange, type = "text", placeholder, min, step, style = {} }) => (
-  <input type={type} value={value} onChange={onChange} placeholder={placeholder} min={min} step={step}
-    style={{ width: "100%", background: T.surfaceHigh, border: `1px solid ${T.border}`, borderRadius: 8, padding: "12px 14px", color: T.text, fontSize: 15, fontFamily: type === "number" ? T.font : T.fontSans, fontWeight: 500, transition: "border-color 0.2s", ...style }}
-    onFocus={e => (e.target.style.borderColor = T.amber)}
-    onBlur={e => (e.target.style.borderColor = T.border)}
-  />
-);
-
-const Select = ({ value, onChange, options }) => (
-  <select value={value} onChange={onChange}
-    style={{ width: "100%", background: T.surfaceHigh, border: `1px solid ${T.border}`, borderRadius: 8, padding: "12px 14px", color: value ? T.text : T.textMuted, fontSize: 15, fontFamily: T.fontSans, fontWeight: 500, cursor: "pointer" }}>
-    {options.map(o => <option key={o.value ?? o} value={o.value ?? o} style={{ background: T.surface }}>{o.label ?? o}</option>)}
-  </select>
-);
-
-const Card = ({ children, style = {}, className = "" }) => (
-  <div className={className} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "20px 18px", ...style }}>
-    {children}
-  </div>
-);
-
-const ResultRow = ({ label, value, valueColor, sub }) => (
-  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 0", borderBottom: `1px solid ${T.border}` }}>
-    <span style={{ color: T.textSub, fontSize: 13 }}>{label}</span>
-    <div style={{ textAlign: "right" }}>
-      <span style={{ fontFamily: T.font, fontSize: 16, fontWeight: 700, color: valueColor || T.text }}>{value}</span>
-      {sub && <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{sub}</div>}
-    </div>
-  </div>
-);
-
-const Badge = ({ children, color }) => (
-  <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, fontFamily: T.font, background: color + "22", color, border: `1px solid ${color}44` }}>
-    {children}
-  </span>
-);
-
-const Btn = ({ onClick, children, color = T.amber, textColor, disabled, style = {} }) => (
-  <button onClick={onClick} disabled={disabled}
-    style={{ padding: "13px 16px", borderRadius: 10, border: "none", background: disabled ? T.surfaceHigh : color, color: disabled ? T.textMuted : (textColor || "#001A0D"), fontSize: 15, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", fontFamily: T.font, letterSpacing: "0.06em", width: "100%", transition: "opacity 0.2s", ...style }}>
-    {children}
-  </button>
-);
-
-const Spinner = () => (
-  <div className="spinner" style={{ width: 18, height: 18, border: `2px solid ${T.border}`, borderTop: `2px solid ${T.amber}`, borderRadius: "50%", display: "inline-block" }} />
-);
-
-// ─── AUTH SCREEN ─────────────────────────────────────────────────────────────
 function AuthScreen({ onAuth }) {
-  const [mode, setMode] = useState("login"); // login | signup | reset
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [mode,     setMode]     = useState('login');
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [success,  setSuccess]  = useState('');
 
   const handle = async () => {
-    setError(""); setSuccess(""); setLoading(true);
+    if (!email) return setError('Email is required');
+    if (mode !== 'reset' && !password) return setError('Password is required');
+    if (mode !== 'reset' && password.length < 6) return setError('Password must be at least 6 characters');
+    setError(''); setSuccess(''); setLoading(true);
     try {
-      if (mode === "signup") {
+      if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        setSuccess("Account created! Check your email to confirm, then log in.");
-        setMode("login");
-      } else if (mode === "login") {
+        setSuccess('Account created! Check your email to confirm, then sign in.');
+        setMode('login');
+      } else if (mode === 'login') {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         onAuth(data.user);
-      } else if (mode === "reset") {
+      } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email);
         if (error) throw error;
-        setSuccess("Password reset email sent. Check your inbox.");
+        setSuccess('Reset email sent. Check your inbox.');
       }
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError(e.message || 'Something went wrong.'); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 16px", maxWidth: 480, margin: "0 auto" }} className="fade-up">
-      {/* Logo */}
-      <div style={{ textAlign: "center", marginBottom: 40 }}>
-        <div style={{ width: 56, height: 56, borderRadius: 14, background: T.amberDim, border: `1px solid ${T.amber}55`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: T.font, fontSize: 22, fontWeight: 700, color: T.amber, margin: "0 auto 16px" }}>RP</div>
-        <div style={{ fontFamily: T.font, fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "0.04em" }}>RiskPilot</div>
-        <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4, fontFamily: T.font }}>Stop blowing accounts.</div>
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px 16px', maxWidth:440, margin:'0 auto', position:'relative' }} className="fade-up">
+      <div style={{ position:'absolute', top:'20%', left:'50%', transform:'translateX(-50%)', width:300, height:300, background:'radial-gradient(circle, var(--gold-dim) 0%, transparent 70%)', pointerEvents:'none' }} />
+      <div style={{ textAlign:'center', marginBottom:36, zIndex:1 }}>
+        <div style={{ fontSize:44, color:'var(--gold)', lineHeight:1, marginBottom:10, filter:'drop-shadow(0 0 20px var(--gold-glow))' }}>◈</div>
+        <div style={{ fontFamily:'var(--font-display)', fontSize:28, fontWeight:800, color:'var(--text)', letterSpacing:'-0.01em' }}>RiskPilot</div>
+        <div style={{ fontFamily:'var(--font-data)', fontSize:10, color:'var(--gold)', letterSpacing:'0.12em', marginTop:4 }}>GOLD EDITION · XAUUSD DISCIPLINE ENGINE</div>
       </div>
-
-      <Card>
-        <div style={{ fontFamily: T.font, fontSize: 11, color: T.amber, letterSpacing: "0.14em", marginBottom: 20 }}>
-          {mode === "login" ? "SIGN IN" : mode === "signup" ? "CREATE ACCOUNT" : "RESET PASSWORD"}
-        </div>
-
-        <div style={{ marginBottom: 14 }}>
-          <Label>Email</Label>
-          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="trader@email.com" />
-        </div>
-
-        {mode !== "reset" && (
-          <div style={{ marginBottom: 20 }}>
-            <Label>Password</Label>
-            <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+      <div style={{ width:'100%', background:'var(--surface)', border:'1px solid var(--border-gold)', borderRadius:'var(--radius-xl)', padding:'28px 24px', display:'flex', flexDirection:'column', gap:18, zIndex:1, boxShadow:'var(--shadow-gold)' }}>
+        <p style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:'var(--text)' }}>
+          {mode==='login'?'Welcome back':mode==='signup'?'Create account':'Reset password'}
+        </p>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div>
+            <p style={{ fontFamily:'var(--font-data)', fontSize:10, color:'var(--text-muted)', letterSpacing:'0.12em', marginBottom:6 }}>EMAIL ADDRESS</p>
+            <AuthInput type="email" value={email} onChange={setEmail} placeholder="you@email.com" onKeyDown={e => e.key==='Enter' && handle()} />
           </div>
-        )}
-
-        {error && (
-          <div style={{ padding: "10px 14px", background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, fontSize: 13, color: T.red, marginBottom: 14 }}>
-            {error}
-          </div>
-        )}
-        {success && (
-          <div style={{ padding: "10px 14px", background: T.greenDim, border: `1px solid ${T.green}44`, borderRadius: 8, fontSize: 13, color: T.green, marginBottom: 14 }}>
-            {success}
-          </div>
-        )}
-
-        <Btn onClick={handle} disabled={loading} color={T.green}>
-          {loading ? <Spinner /> : mode === "login" ? "SIGN IN" : mode === "signup" ? "CREATE ACCOUNT" : "SEND RESET EMAIL"}
-        </Btn>
-
-        <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-          {mode === "login" && (
-            <>
-              <button onClick={() => { setMode("signup"); setError(""); }} style={{ background: "none", border: "none", color: T.amber, fontSize: 13, cursor: "pointer", fontFamily: T.fontSans }}>
-                No account? Sign up
-              </button>
-              <button onClick={() => { setMode("reset"); setError(""); }} style={{ background: "none", border: "none", color: T.textMuted, fontSize: 12, cursor: "pointer", fontFamily: T.fontSans }}>
-                Forgot password?
-              </button>
-            </>
-          )}
-          {mode !== "login" && (
-            <button onClick={() => { setMode("login"); setError(""); }} style={{ background: "none", border: "none", color: T.amber, fontSize: 13, cursor: "pointer", fontFamily: T.fontSans }}>
-              Back to sign in
-            </button>
+          {mode !== 'reset' && (
+            <div>
+              <p style={{ fontFamily:'var(--font-data)', fontSize:10, color:'var(--text-muted)', letterSpacing:'0.12em', marginBottom:6 }}>PASSWORD</p>
+              <AuthInput type="password" value={password} onChange={setPassword} placeholder="••••••••" onKeyDown={e => e.key==='Enter' && handle()} />
+            </div>
           )}
         </div>
-      </Card>
-
-      <div style={{ textAlign: "center", marginTop: 24, fontSize: 11, color: T.textMuted, fontFamily: T.font }}>
-        Your data is private and encrypted.
+        {error   && <div style={{ padding:'10px 14px', background:'var(--red-dim)', border:'1px solid rgba(255,61,87,0.3)', borderRadius:'var(--radius)', fontSize:13, color:'var(--red)' }}>{error}</div>}
+        {success && <div style={{ padding:'10px 14px', background:'var(--green-dim)', border:'1px solid rgba(0,230,118,0.3)', borderRadius:'var(--radius)', fontSize:13, color:'var(--green)' }}>{success}</div>}
+        <button onClick={handle} disabled={loading} style={{ width:'100%', padding:14, borderRadius:'var(--radius)', border:'none', background:'var(--gold)', color:'#080600', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'var(--font-data)', letterSpacing:'0.06em', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+          {loading ? <span className="spin" style={{ display:'inline-block', width:16, height:16, border:'2px solid rgba(0,0,0,0.2)', borderTop:'2px solid #0A0800', borderRadius:'50%' }} /> : mode==='login'?'Sign In →':mode==='signup'?'Create Account →':'Send Reset Email →'}
+        </button>
+        <div style={{ display:'flex', justifyContent:'center', gap:10, alignItems:'center' }}>
+          {mode==='login' && <>
+            <button onClick={() => { setMode('signup'); setError(''); }} style={{ background:'none', border:'none', color:'var(--gold)', fontSize:13, cursor:'pointer' }}>Create account</button>
+            <span style={{ color:'var(--text-faint)' }}>·</span>
+            <button onClick={() => { setMode('reset'); setError(''); }} style={{ background:'none', border:'none', color:'var(--text-muted)', fontSize:12, cursor:'pointer' }}>Forgot password?</button>
+          </>}
+          {mode !== 'login' && <button onClick={() => { setMode('login'); setError(''); }} style={{ background:'none', border:'none', color:'var(--gold)', fontSize:13, cursor:'pointer' }}>Back to sign in</button>}
+        </div>
       </div>
+      <p style={{ marginTop:24, fontSize:12, color:'var(--text-muted)', fontFamily:'var(--font-data)', zIndex:1 }}>Built for Gold traders who take risk seriously.</p>
     </div>
   );
 }
 
-// ─── TAB BAR ─────────────────────────────────────────────────────────────────
-const TABS = [
-  { id: "calc", label: "Calculator", icon: "⚡" },
-  { id: "journal", label: "Journal", icon: "📋" },
-  { id: "stats", label: "Performance", icon: "📊" },
-];
+function AppHeader({ user, onSignOut }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <header style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)', padding:'12px 16px', display:'flex', alignItems:'center', gap:12, position:'sticky', top:0, zIndex:50 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, flex:1 }}>
+        <span style={{ fontSize:20, color:'var(--gold)', filter:'drop-shadow(0 0 6px var(--gold-glow))' }}>◈</span>
+        <div>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:14, fontWeight:700, color:'var(--text)', letterSpacing:'-0.01em', lineHeight:1 }}>RiskPilot</div>
+          <div style={{ fontFamily:'var(--font-data)', fontSize:8, color:'var(--gold)', letterSpacing:'0.12em', lineHeight:1, marginTop:2 }}>GOLD EDITION</div>
+        </div>
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:'var(--radius-sm)', background:'var(--gold-dim)', border:'1px solid var(--border-gold)' }}>
+        <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--gold)', animation:'goldPulse 2s infinite' }} />
+        <span style={{ fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--gold)', letterSpacing:'0.08em' }}>XAUUSD</span>
+      </div>
+      <div style={{ position:'relative' }}>
+        <button onClick={() => setOpen(o => !o)} style={{ background:'var(--surface-high)', border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:'6px 12px', color:'var(--text-sub)', fontSize:12, cursor:'pointer', fontFamily:'var(--font-data)' }}>
+          {user.email.split('@')[0].slice(0,8)}
+        </button>
+        {open && (
+          <div className="fade-in" style={{ position:'absolute', right:0, top:'110%', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:8, minWidth:180, zIndex:200, boxShadow:'var(--shadow-card)' }}>
+            <p style={{ fontSize:11, color:'var(--text-muted)', fontFamily:'var(--font-data)', padding:'4px 10px 8px', borderBottom:'1px solid var(--border)', marginBottom:6, wordBreak:'break-all' }}>{user.email}</p>
+            <button onClick={() => { supabase.auth.signOut(); onSignOut(); }} style={{ width:'100%', background:'var(--red-dim)', border:'1px solid rgba(255,61,87,0.3)', borderRadius:'var(--radius-sm)', padding:'8px 12px', color:'var(--red)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'var(--font-data)', textAlign:'left' }}>Sign Out</button>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
 
 function TabBar({ active, setActive }) {
+  const tabs = [{ id:'calc', icon:'◈', label:'Calculator' }, { id:'dashboard', icon:'▦', label:'Dashboard' }];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", background: T.surface, borderTop: `1px solid ${T.border}`, position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, maxWidth: 480, margin: "0 auto" }}>
-      {TABS.map(t => (
-        <button key={t.id} onClick={() => setActive(t.id)} style={{ padding: "12px 4px 10px", background: "transparent", border: "none", borderTop: `2px solid ${active === t.id ? T.amber : "transparent"}`, color: active === t.id ? T.amber : T.textMuted, fontSize: 11, fontWeight: 600, fontFamily: T.fontSans, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all 0.2s", letterSpacing: "0.04em" }}>
-          <span style={{ fontSize: 18 }}>{t.icon}</span>
-          {t.label}
+    <nav style={{ display:'grid', gridTemplateColumns:'1fr 1fr', background:'var(--surface)', borderTop:'1px solid var(--border)', position:'fixed', bottom:0, left:0, right:0, zIndex:100, maxWidth:520, margin:'0 auto' }}>
+      <div style={{ position:'absolute', top:0, left:active==='calc'?'0%':'50%', width:'50%', height:2, background:'var(--gold)', boxShadow:'0 0 8px var(--gold-glow)', transition:'left 0.3s cubic-bezier(0.16,1,0.3,1)' }} />
+      {tabs.map(t => (
+        <button key={t.id} onClick={() => setActive(t.id)} style={{ padding:'13px 8px 11px', background:'transparent', border:'none', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, fontFamily:'var(--font-body)', color:active===t.id?'var(--gold)':'var(--text-muted)', transition:'color 0.2s' }}>
+          <span style={{ fontSize:16, lineHeight:1 }}>{t.icon}</span>
+          <span style={{ fontSize:10, fontWeight:600, letterSpacing:'0.06em' }}>{t.label}</span>
         </button>
       ))}
-    </div>
+    </nav>
   );
 }
 
-// ─── HEADER ──────────────────────────────────────────────────────────────────
-function Header({ user, onSignOut }) {
-  const [showMenu, setShowMenu] = useState(false);
-  return (
-    <div style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: "14px 16px 12px", position: "sticky", top: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: T.amberDim, border: `1px solid ${T.amber}55`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: T.font, fontSize: 14, fontWeight: 700, color: T.amber }}>RP</div>
-        <div>
-          <div style={{ fontFamily: T.font, fontSize: 14, fontWeight: 700, color: T.text, letterSpacing: "0.04em" }}>RiskPilot</div>
-          <div style={{ fontSize: 10, color: T.textMuted, fontFamily: T.font }}>Stop blowing accounts.</div>
-        </div>
-      </div>
-      <div style={{ position: "relative" }}>
-        <button onClick={() => setShowMenu(m => !m)} style={{ background: T.surfaceHigh, border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 12px", color: T.textSub, fontSize: 12, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.green }} />
-          {user.email.split("@")[0]}
-        </button>
-        {showMenu && (
-          <div className="fade-up" style={{ position: "absolute", right: 0, top: "110%", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: 8, minWidth: 160, zIndex: 200 }}>
-            <div style={{ fontSize: 11, color: T.textMuted, padding: "4px 10px 8px", fontFamily: T.font, borderBottom: `1px solid ${T.border}`, marginBottom: 6 }}>{user.email}</div>
-            <button onClick={onSignOut} style={{ width: "100%", background: T.redDim, border: `1px solid ${T.red}33`, borderRadius: 8, padding: "8px 12px", color: T.red, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: T.font, textAlign: "left" }}>
-              Sign Out
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── CALCULATOR TAB ───────────────────────────────────────────────────────────
-function CalculatorTab() {
-  const [form, setForm] = useState({ balance: "", risk: "1", entry: "", sl: "", rrr: "2" });
-  const [result, setResult] = useState(null);
-  const [flashKey, setFlashKey] = useState(0);
-
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
-
-  const calc = useCallback(() => {
-    const bal = parseFloat(form.balance), riskPct = parseFloat(form.risk);
-    const entry = parseFloat(form.entry), sl = parseFloat(form.sl), rrr = parseFloat(form.rrr);
-    if (!bal || !riskPct || !entry || !sl) return;
-    const riskAmt = (bal * riskPct) / 100;
-    const slDist = Math.abs(entry - sl);
-    if (!slDist) return;
-    const positionSize = riskAmt / slDist;
-    const estProfit = riskAmt * rrr;
-    const tp = entry > sl ? entry + slDist * rrr : entry - slDist * rrr;
-    setResult({ riskAmt, slDist, positionSize, estProfit, tp, rrr, riskPct });
-    setFlashKey(k => k + 1);
-  }, [form]);
-
-  useEffect(() => { const t = setTimeout(calc, 300); return () => clearTimeout(t); }, [form, calc]);
-
-  const riskLevel = result
-    ? result.riskPct <= 1 ? { label: "SAFE", color: T.green }
-    : result.riskPct <= 2 ? { label: "MODERATE", color: T.amber }
-    : { label: "HIGH RISK", color: T.red } : null;
-
-  return (
-    <div style={{ padding: "20px 16px 100px" }} className="fade-up">
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontFamily: T.font, fontSize: 11, color: T.amber, letterSpacing: "0.14em", marginBottom: 4 }}>RISK CALCULATOR</div>
-        <div style={{ fontSize: 22, fontWeight: 700 }}>Position Sizing</div>
-        <div style={{ fontSize: 13, color: T.textSub, marginTop: 4 }}>Calculate before you enter. Every. Single. Time.</div>
-      </div>
-
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <Label>Account Balance ($)</Label>
-            <Input type="number" value={form.balance} onChange={set("balance")} placeholder="10000" min="0" />
-          </div>
-          <div><Label>Risk % per Trade</Label><Input type="number" value={form.risk} onChange={set("risk")} placeholder="1" min="0.1" step="0.1" /></div>
-          <div><Label>Risk:Reward Ratio</Label><Input type="number" value={form.rrr} onChange={set("rrr")} placeholder="2" min="0.5" step="0.5" /></div>
-          <div><Label>Entry Price</Label><Input type="number" value={form.entry} onChange={set("entry")} placeholder="1.0850" step="any" /></div>
-          <div><Label>Stop Loss Price</Label><Input type="number" value={form.sl} onChange={set("sl")} placeholder="1.0820" step="any" /></div>
-        </div>
-      </Card>
-
-      {result ? (
-        <Card key={flashKey} className="result-flash" style={{ border: `1px solid ${T.greenDim}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <div style={{ fontFamily: T.font, fontSize: 10, color: T.textMuted, letterSpacing: "0.12em" }}>ANALYSIS RESULT</div>
-            {riskLevel && <Badge color={riskLevel.color}>{riskLevel.label}</Badge>}
-          </div>
-          <ResultRow label="💰 Risk Amount" value={`$${fmt(result.riskAmt)}`} valueColor={T.amber} />
-          <ResultRow label="📏 SL Distance" value={fmt(result.slDist, 5)} sub="price units" />
-          <ResultRow label="📦 Position Size" value={`${fmtLots(result.positionSize / 100000)} lots`} valueColor={T.text} sub={`${fmt(result.positionSize, 0)} units`} />
-          <ResultRow label="🎯 Take Profit" value={fmt(result.tp, 5)} />
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 0" }}>
-            <span style={{ color: T.textSub, fontSize: 13 }}>✅ Est. Profit (1:{result.rrr})</span>
-            <span style={{ fontFamily: T.font, fontSize: 18, fontWeight: 700, color: T.green }}>${fmt(result.estProfit)}</span>
-          </div>
-          <div style={{ marginTop: 8, padding: "10px 14px", background: result.riskPct > 2 ? T.redDim : T.greenDim, borderRadius: 8, border: `1px solid ${result.riskPct > 2 ? T.red + "44" : T.green + "44"}` }}>
-            <div style={{ fontSize: 12, color: result.riskPct > 2 ? T.red : T.green, fontWeight: 600 }}>
-              {result.riskPct > 2 ? `⚠️ Risking ${result.riskPct}% is aggressive. Pro traders risk 0.5–2% max.` : `✓ ${result.riskPct}% risk is within disciplined range. Stay consistent.`}
-            </div>
-          </div>
-        </Card>
-      ) : (
-        <Card style={{ textAlign: "center", padding: "32px 18px" }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>⚡</div>
-          <div style={{ color: T.textSub, fontSize: 14 }}>Fill in the fields above</div>
-          <div style={{ color: T.textMuted, fontSize: 12, marginTop: 4 }}>Results appear in real-time</div>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-// ─── JOURNAL TAB ──────────────────────────────────────────────────────────────
-const BLANK = { pair: "", entry: "", sl: "", tp: "", result: "", emotion: "", notes: "" };
-
-function JournalTab({ user }) {
-  const [trades, setTrades] = useState([]);
-  const [form, setForm] = useState(BLANK);
-  const [adding, setAdding] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [expandedId, setExpandedId] = useState(null);
-
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
-
-  useEffect(() => {
-    const fetch = async () => {
-      setLoading(true);
-      const { data } = await supabase.from("trades").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-      setTrades(data || []);
-      setLoading(false);
-    };
-    fetch();
-  }, [user.id]);
-
-  const submit = async () => {
-    if (!form.pair || !form.entry || !form.sl || !form.result) return;
-    setSaving(true);
-    const payload = { ...form, user_id: user.id, date: new Date().toLocaleDateString("en-GB") };
-    const { data, error } = await supabase.from("trades").insert(payload).select().single();
-    if (!error && data) setTrades(t => [data, ...t]);
-    setForm(BLANK); setAdding(false); setSaving(false);
-  };
-
-  const remove = async (id) => {
-    await supabase.from("trades").delete().eq("id", id);
-    setTrades(t => t.filter(x => x.id !== id));
-  };
-
-  return (
-    <div style={{ padding: "20px 16px 100px" }} className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-        <div>
-          <div style={{ fontFamily: T.font, fontSize: 11, color: T.amber, letterSpacing: "0.14em", marginBottom: 4 }}>TRADE JOURNAL</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>Your Trades</div>
-          <div style={{ fontSize: 13, color: T.textSub, marginTop: 4 }}>{trades.length} trade{trades.length !== 1 ? "s" : ""} logged</div>
-        </div>
-        <button onClick={() => setAdding(a => !a)} style={{ padding: "10px 16px", borderRadius: 10, border: `1px solid ${adding ? T.border : T.amber}`, background: adding ? T.surfaceHigh : T.amberDim, color: adding ? T.textSub : T.amber, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: T.font }}>
-          {adding ? "✕ Cancel" : "+ LOG TRADE"}
-        </button>
-      </div>
-
-      {adding && (
-        <Card style={{ marginBottom: 20, border: `1px solid ${T.amber}44` }} className="fade-up">
-          <div style={{ fontFamily: T.font, fontSize: 10, color: T.amber, letterSpacing: "0.12em", marginBottom: 16 }}>NEW TRADE ENTRY</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div><Label>Pair *</Label><Input value={form.pair} onChange={set("pair")} placeholder="XAUUSD" /></div>
-            <div><Label>Result *</Label>
-              <Select value={form.result} onChange={set("result")} options={[{ value: "", label: "Select..." }, { value: "Win", label: "✅ Win" }, { value: "Loss", label: "❌ Loss" }, { value: "BE", label: "↔ Break Even" }]} />
-            </div>
-            <div><Label>Entry *</Label><Input type="number" value={form.entry} onChange={set("entry")} placeholder="1.0850" step="any" /></div>
-            <div><Label>Stop Loss *</Label><Input type="number" value={form.sl} onChange={set("sl")} placeholder="1.0820" step="any" /></div>
-            <div><Label>Take Profit</Label><Input type="number" value={form.tp} onChange={set("tp")} placeholder="1.0910" step="any" /></div>
-            <div><Label>Emotion</Label>
-              <Select value={form.emotion} onChange={set("emotion")} options={[{ value: "", label: "None" }, ...EMOTIONS.map(e => ({ value: e, label: e }))]} />
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <Label>Notes</Label>
-              <textarea value={form.notes} onChange={set("notes")} placeholder="Setup, confluences, what went right/wrong..." rows={3}
-                style={{ width: "100%", background: T.surfaceHigh, border: `1px solid ${T.border}`, borderRadius: 8, padding: "12px 14px", color: T.text, fontSize: 14, fontFamily: T.fontSans, resize: "vertical" }}
-                onFocus={e => (e.target.style.borderColor = T.amber)} onBlur={e => (e.target.style.borderColor = T.border)} />
-            </div>
-          </div>
-          <Btn onClick={submit} disabled={saving} color={T.green} style={{ marginTop: 16 }}>
-            {saving ? <Spinner /> : "SAVE TRADE"}
-          </Btn>
-        </Card>
-      )}
-
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 40 }}><Spinner /></div>
-      ) : trades.length === 0 ? (
-        <Card style={{ textAlign: "center", padding: "40px 18px" }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>📋</div>
-          <div style={{ color: T.textSub, fontSize: 15, fontWeight: 600 }}>No trades logged yet</div>
-          <div style={{ color: T.textMuted, fontSize: 13, marginTop: 6 }}>Your journal helps you spot patterns in your trading psychology</div>
-        </Card>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {trades.map(t => {
-            const isWin = t.result === "Win", isBE = t.result === "BE";
-            const resColor = isWin ? T.green : isBE ? T.amber : T.red;
-            const expanded = expandedId === t.id;
-            return (
-              <Card key={t.id} style={{ cursor: "pointer", border: `1px solid ${expanded ? T.borderHigh : T.border}` }} onClick={() => setExpandedId(expanded ? null : t.id)}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: resColor + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
-                      {isWin ? "✅" : isBE ? "↔" : "❌"}
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: T.font, fontSize: 14, fontWeight: 700 }}>{t.pair}</div>
-                      <div style={{ fontSize: 12, color: T.textMuted }}>{t.date}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    {t.emotion && <Badge color={EMOTION_COLORS[t.emotion] || T.textSub}>{t.emotion}</Badge>}
-                    <span style={{ color: T.textMuted, fontSize: 16 }}>{expanded ? "▲" : "▼"}</span>
-                  </div>
-                </div>
-                {expanded && (
-                  <div className="fade-up" style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${T.border}` }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
-                      {[["Entry", t.entry], ["SL", t.sl], ["TP", t.tp || "—"]].map(([l, v]) => (
-                        <div key={l} style={{ background: T.surfaceHigh, borderRadius: 8, padding: "8px 10px" }}>
-                          <div style={{ fontSize: 10, color: T.textMuted, fontFamily: T.font, marginBottom: 3 }}>{l}</div>
-                          <div style={{ fontSize: 13, fontFamily: T.font, fontWeight: 600 }}>{v}</div>
-                        </div>
-                      ))}
-                    </div>
-                    {t.notes && <div style={{ fontSize: 13, color: T.textSub, marginBottom: 12, lineHeight: 1.6 }}>{t.notes}</div>}
-                    <button onClick={e => { e.stopPropagation(); remove(t.id); }}
-                      style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, color: T.red, fontSize: 12, fontWeight: 600, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
-                      DELETE TRADE
-                    </button>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── STATS TAB ────────────────────────────────────────────────────────────────
-function StatsTab({ user }) {
-  const [trades, setTrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase.from("trades").select("*").eq("user_id", user.id);
-      setTrades(data || []); setLoading(false);
-    };
-    fetch();
-  }, [user.id]);
-
-  if (loading) return <div style={{ padding: 40, textAlign: "center" }}><Spinner /></div>;
-
-  const wins = trades.filter(t => t.result === "Win").length;
-  const losses = trades.filter(t => t.result === "Loss").length;
-  const be = trades.filter(t => t.result === "BE").length;
-  const total = trades.length;
-  const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : 0;
-  const winRateColor = parseFloat(winRate) >= 55 ? T.green : parseFloat(winRate) >= 45 ? T.amber : T.red;
-
-  const pairCount = trades.reduce((acc, t) => { acc[t.pair] = (acc[t.pair] || 0) + 1; return acc; }, {});
-  const topPairs = Object.entries(pairCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const emotionCount = trades.filter(t => t.emotion).reduce((acc, t) => { acc[t.emotion] = (acc[t.emotion] || 0) + 1; return acc; }, {});
-  const emotionEntries = Object.entries(emotionCount).sort((a, b) => b[1] - a[1]);
-
-  return (
-    <div style={{ padding: "20px 16px 100px" }} className="fade-up">
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontFamily: T.font, fontSize: 11, color: T.amber, letterSpacing: "0.14em", marginBottom: 4 }}>PERFORMANCE</div>
-        <div style={{ fontSize: 22, fontWeight: 700 }}>Your Statistics</div>
-        <div style={{ fontSize: 13, color: T.textSub, marginTop: 4 }}>Based on {total} logged trade{total !== 1 ? "s" : ""}</div>
-      </div>
-
-      {total === 0 ? (
-        <Card style={{ textAlign: "center", padding: "40px 18px" }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
-          <div style={{ color: T.textSub, fontSize: 15, fontWeight: 600 }}>No data yet</div>
-          <div style={{ color: T.textMuted, fontSize: 13, marginTop: 6 }}>Log trades in the Journal tab to see your stats</div>
-        </Card>
-      ) : (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-            {[{ label: "Win Rate", value: `${winRate}%`, color: winRateColor, icon: "🎯" }, { label: "Total Trades", value: total, color: T.text, icon: "📋" }, { label: "Wins", value: wins, color: T.green, icon: "✅" }, { label: "Losses", value: losses, color: T.red, icon: "❌" }].map(s => (
-              <Card key={s.label} style={{ textAlign: "center", padding: "18px 12px" }}>
-                <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
-                <div style={{ fontFamily: T.font, fontSize: 24, fontWeight: 700, color: s.color }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>{s.label}</div>
-              </Card>
-            ))}
-          </div>
-
-          <Card style={{ marginBottom: 16 }}>
-            <div style={{ fontFamily: T.font, fontSize: 10, color: T.textMuted, letterSpacing: "0.1em", marginBottom: 14 }}>WIN / LOSS DISTRIBUTION</div>
-            <div style={{ display: "flex", height: 10, borderRadius: 6, overflow: "hidden", gap: 2 }}>
-              {wins > 0 && <div style={{ flex: wins, background: T.green, borderRadius: 4 }} />}
-              {be > 0 && <div style={{ flex: be, background: T.amber, borderRadius: 4 }} />}
-              {losses > 0 && <div style={{ flex: losses, background: T.red, borderRadius: 4 }} />}
-            </div>
-            <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
-              {[[wins, "Wins", T.green], [be, "Break Even", T.amber], [losses, "Losses", T.red]].map(([n, l, c]) => (
-                <div key={l} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />
-                  <span style={{ fontSize: 12, color: T.textSub }}>{n} {l}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {topPairs.length > 0 && (
-            <Card style={{ marginBottom: 16 }}>
-              <div style={{ fontFamily: T.font, fontSize: 10, color: T.textMuted, letterSpacing: "0.1em", marginBottom: 14 }}>MOST TRADED PAIRS</div>
-              {topPairs.map(([pair, count]) => (
-                <div key={pair} style={{ marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontFamily: T.font, fontSize: 13, fontWeight: 600 }}>{pair}</span>
-                    <span style={{ fontSize: 12, color: T.textMuted }}>{count} trade{count !== 1 ? "s" : ""}</span>
-                  </div>
-                  <div style={{ height: 4, background: T.surfaceHigh, borderRadius: 4 }}>
-                    <div style={{ height: "100%", background: T.amber, borderRadius: 4, width: `${(count / total) * 100}%` }} />
-                  </div>
-                </div>
-              ))}
-            </Card>
-          )}
-
-          {emotionEntries.length > 0 && (
-            <Card>
-              <div style={{ fontFamily: T.font, fontSize: 10, color: T.textMuted, letterSpacing: "0.1em", marginBottom: 14 }}>EMOTIONAL PATTERNS</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {emotionEntries.map(([em, count]) => (
-                  <div key={em} style={{ display: "flex", alignItems: "center", gap: 6, background: T.surfaceHigh, borderRadius: 8, padding: "6px 12px" }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: EMOTION_COLORS[em] || T.textSub }} />
-                    <span style={{ fontSize: 13 }}>{em}</span>
-                    <span style={{ fontFamily: T.font, fontSize: 12, color: T.textMuted }}>×{count}</span>
-                  </div>
-                ))}
-              </div>
-              {emotionEntries.some(([em]) => ["Greedy", "FOMO", "Revenge"].includes(em)) && (
-                <div style={{ marginTop: 14, padding: "10px 14px", background: T.redDim, borderRadius: 8, border: `1px solid ${T.red}33`, fontSize: 12, color: T.red, fontWeight: 600 }}>
-                  ⚠️ Emotional trading detected. Review these trades — emotions are your biggest edge killer.
-                </div>
-              )}
-            </Card>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App() {
-  injectStyles();
-  const [user, setUser] = useState(null);
+  const [user,        setUser]        = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [tab, setTab] = useState("calc");
+  const [tab,         setTab]         = useState('calc');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -596,22 +149,22 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => { await supabase.auth.signOut(); setUser(null); };
-
   if (authLoading) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: T.bg }}>
-      <Spinner />
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
+      <div style={{ fontSize:32, color:'var(--gold)' }}>◈</div>
+      <p style={{ fontFamily:'var(--font-data)', fontSize:11, color:'var(--text-muted)', letterSpacing:'0.1em' }}>LOADING...</p>
     </div>
   );
 
   if (!user) return <AuthScreen onAuth={setUser} />;
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: T.bg }}>
-      <Header user={user} onSignOut={signOut} />
-      {tab === "calc" && <CalculatorTab />}
-      {tab === "journal" && <JournalTab user={user} />}
-      {tab === "stats" && <StatsTab user={user} />}
+    <div style={{ maxWidth:520, margin:'0 auto', minHeight:'100vh', background:'var(--bg-1)', position:'relative' }}>
+      <AppHeader user={user} onSignOut={() => setUser(null)} />
+      <main>
+        {tab==='calc'      && <Calculator user={user} />}
+        {tab==='dashboard' && <Dashboard  user={user} />}
+      </main>
       <TabBar active={tab} setActive={setTab} />
     </div>
   );

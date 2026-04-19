@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg:           #080B0F;
+  --bg-1:         #0D1117;
+  --bg-2:         #121820;
+  --bg-3:         #182030;
+  --surface:      #0F1520;
+  --surface-high: #162030;
+  --surface-top:  #1C2A40;
+  --border:       rgba(255,255,255,0.06);
+  --border-high:  rgba(255,255,255,0.12);
+  --border-gold:  rgba(212,175,55,0.3);
+  --gold:         #D4AF37;
+  --gold-bright:  #F5C842;
+  --gold-dim:     rgba(212,175,55,0.12);
+  --gold-glow:    rgba(212,175,55,0.25);
+  --green:        #00E676;
+  --green-dim:    rgba(0,230,118,0.1);
+  --amber:        #FFB300;
+  --amber-dim:    rgba(255,179,0,0.1);
+  --red:          #FF3D57;
+  --red-dim:      rgba(255,61,87,0.1);
+  --blue:         #40C4FF;
+  --text:         #E8EEF5;
+  --text-sub:     #8A9BB0;
+  --text-muted:   #3D5168;
+  --text-faint:   #1E2D40;
+  --font-display: 'Syne', sans-serif;
+  --font-data:    'JetBrains Mono', monospace;
+  --font-body:    'Outfit', sans-serif;
+  --radius-sm:    6px;
+  --radius:       10px;
+  --radius-lg:    16px;
+  --radius-xl:    22px;
+  --shadow-gold:  0 0 40px rgba(212,175,55,0.08);
+  --shadow-card:  0 4px 24px rgba(0,0,0,0.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+#root { position: relative; z-index: 1; }
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--bg-1); }
+::-webkit-scrollbar-thumb { background: var(--border-high); border-radius: 2px; }
+input, select, textarea { font-family: var(--font-body); outline: none; -webkit-appearance: none; }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes goldPulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  50%       { box-shadow: 0 0 0 8px transparent; }
+}
+
+.fade-up { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+.fade-in { animation: fadeIn 0.3s ease forwards; }
+.spin    { animation: spin   0.8s linear infinite; }
+.font-display { font-family: var(--font-display); }
+.font-data    { font-family: var(--font-data); }
+.font-body    { font-family: var(--font-body); }
+
+.stagger > *:nth-child(1) { animation-delay: 0.05s; opacity: 0; animation-fill-mode: forwards; animation-name: fadeUp; animation-duration: 0.4s; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
+.stagger > *:nth-child(2) { animation-delay: 0.1s;  opacity: 0; animation-fill-mode: forwards; animation-name: fadeUp; animation-duration: 0.4s; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
+.stagger > *:nth-child(3) { animation-delay: 0.15s; opacity: 0; animation-fill-mode: forwards; animation-name: fadeUp; animation-duration: 0.4s; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
+.stagger > *:nth-child(4) { animation-delay: 0.2s;  opacity: 0; animation-fill-mode: forwards; animation-name: fadeUp; animation-duration: 0.4s; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
