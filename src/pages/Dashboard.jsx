@@ -37,7 +37,7 @@ export default function Dashboard({ user }) {
         setTrades(data || []);
         setLastFetch(new Date());
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred.');
     } finally {
       setLoading(false);
