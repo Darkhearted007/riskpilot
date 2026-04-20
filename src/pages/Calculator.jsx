@@ -115,6 +115,32 @@ function StatChip({ label, value, color, bg }) {
   );
 }
 
+function SelectionInput({ value, onChange, options, label, icon }) {
+  return (
+    <div style={{ flex: 1 }}>
+      <FieldLabel>{label}</FieldLabel>
+      <div style={{ position: 'relative' }}>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            width: '100%', background: 'var(--bg-3)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)', padding: '12px 14px 12px 36px',
+            color: 'var(--text)', fontSize: 14, fontFamily: 'var(--font-data)',
+            fontWeight: 600, outline: 'none', transition: 'all 0.2s',
+            appearance: 'none', cursor: 'pointer'
+          }}
+        >
+          {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 14 }}>{icon}</span>
+        <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--text-muted)', pointerEvents: 'none' }}>▼</span>
+      </div>
+    </div>
+  );
+}
+
 function DirectionToggle({ value, onChange }) {
   return (
     <div>
@@ -176,6 +202,8 @@ export default function Calculator({ user }) {
   const [sl,        setSl]        = useState('');
   const [tp,        setTp]        = useState('');
   const [direction, setDirection] = useState('BUY');
+  const [setupType, setSetupType] = useState('Retest');
+  const [emotion,   setEmotion]   = useState('Calm');
   const [notes,     setNotes]     = useState('');
 
   // ── Computed ─────────────────────────────────────────────
@@ -252,21 +280,29 @@ export default function Calculator({ user }) {
     setSaving(true); setSaved(false); setSaveError('');
 
     const { error } = await supabase.from('trades').insert({
-      user_id:      user.id,
-      balance:      parseFloat(balance),
-      risk_percent: parseFloat(riskPct),
-      stop_loss:    derived?.rawSlPips || 0,
-      lot_size:     result.lotSize,
-      risk_amount:  result.riskAmount,
-      risk_level:   result.riskLevel,
-      session:      session?.session || 'London',
-      notes:        notes.trim() || null,
+      user_id:           user.id,
+      balance:           parseFloat(balance),
+      risk_percent:      parseFloat(riskPct),
+      lot_size:          result.lotSize,
+      risk_amount:       result.riskAmount,
+      risk_level:        result.riskLevel,
+      session:           session?.session || 'London',
+      
+      // New Journaling Fields
+      direction:         direction,
+      entry_price:       parseFloat(entry),
+      stop_loss_price:   parseFloat(sl),
+      take_profit_price: tp ? parseFloat(tp) : null,
+      setup_type:        setupType,
+      emotion:           emotion,
+      notes:             notes.trim() || null,
+      status:            'open'
     });
 
     if (error) { setSaveError('Failed to save. Try again.'); }
     else { setSaved(true); setTimeout(() => setSaved(false), 3000); }
     setSaving(false);
-  }, [result, balance, riskPct, derived, notes, session, user, saving]);
+  }, [user.id, balance, riskPct, session, result, notes, direction, entry, sl, tp, setupType, emotion, saving]);
 
   const levelStyle = result ? LEVEL_STYLE[result.riskLevel] : null;
   const riskAmount = balance && riskPct ? parseFloat(balance) * (parseFloat(riskPct)/100) : 0;
@@ -364,6 +400,24 @@ export default function Calculator({ user }) {
             placeholder={direction==='BUY' ? '2690.00 (above entry)' : '2610.00 (below entry)'}
             hint="Optional — for RRR calc"
             accent="var(--green)"
+          />
+        </div>
+
+        {/* Journaling Setup */}
+        <div style={{ display:'flex', gap:10, marginTop:12 }}>
+          <SelectionInput
+            label="Setup Type"
+            value={setupType}
+            onChange={setSetupType}
+            icon="🎯"
+            options={['Breakout', 'Retest', 'Order Block', 'SMC Setup', 'Trendline', 'News Event']}
+          />
+          <SelectionInput
+            label="Emotion"
+            value={emotion}
+            onChange={setEmotion}
+            icon="🧠"
+            options={['Calm', 'FOMO', 'Anxious', 'Confident', 'Bored', 'Aggressive']}
           />
         </div>
 

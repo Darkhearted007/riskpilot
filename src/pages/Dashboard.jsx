@@ -4,6 +4,56 @@ import { calculateDisciplineScore } from '../lib/riskEngine';
 import DisciplineScore from '../components/DisciplineScore';
 import TradeHistory from '../components/TradeHistory';
 
+function EquityCurve({ trades }) {
+  if (trades.length < 2) return null;
+  
+  // Calculate cumulative P/L
+  const points = trades
+    .slice()
+    .reverse()
+    .reduce((acc, t) => {
+      const prev = acc.length > 0 ? acc[acc.length - 1] : 0;
+      acc.push(prev + parseFloat(t.pnl_amount || 0));
+      return acc;
+    }, []);
+
+  const min = Math.min(0, ...points);
+  const max = Math.max(0.1, ...points);
+  const range = max - min;
+  const width = 100;
+  const height = 40;
+
+  const svgPoints = points.map((p, i) => {
+    const x = (i / (points.length - 1)) * width;
+    const y = height - ((p - min) / range) * height;
+    return `${x},${y}`;
+  }).join(' ');
+
+  const zeroY = height - ((0 - min) / range) * height;
+
+  return (
+    <div style={{ marginTop:14 }}>
+      <p style={{ fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.14em', marginBottom:10 }}>EQUITY CURVE (CUMULATIVE PNL)</p>
+      <div style={{ position:'relative', height:height + 20, width:'100%' }}>
+        <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ width:'100%', height:'100%', overflow:'visible' }}>
+          {/* Zero Line */}
+          <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2" />
+          {/* Gradient */}
+          <defs>
+            <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="var(--gold)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d={`M 0,${zeroY} L ${svgPoints} L ${width},${height} L 0,${height} Z`} fill="url(#curveGradient)" />
+          {/* Path */}
+          <polyline points={svgPoints} fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ filter:'drop-shadow(0 0 4px var(--gold-glow))' }} />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({ label, value, icon, color }) {
   return (
     <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'16px 12px', display:'flex', flexDirection:'column', alignItems:'center', gap:4, textAlign:'center' }}>
@@ -50,12 +100,27 @@ export default function Dashboard({ user }) {
   }, [fetchTrades]);
 
   const disciplineData = calculateDisciplineScore(trades);
-  const totalTrades = trades.length;
-  const avgRisk  = totalTrades > 0 ? (trades.reduce((s,t) => s + parseFloat(t.risk_percent), 0) / totalTrades).toFixed(2) : 0;
-  const maxRisk  = totalTrades > 0 ? Math.max(...trades.map(t => parseFloat(t.risk_percent))).toFixed(2) : 0;
-  const safeRate = totalTrades > 0 ? ((trades.filter(t => t.risk_level==='safe').length / totalTrades)*100).toFixed(0) : 0;
+  
+  // Performance Stats
+  const closedTrades = trades.filter(t => t.status === 'closed');
+  const wins = closedTrades.filter(t => t.is_win);
+  const winRate = closedTrades.length > 0 ? (wins.length / closedTrades.length * 100).toFixed(0) : 0;
+  
+  const grossProfit = closedTrades.reduce((s, t) => s + (t.pnl_amount > 0 ? t.pnl_amount : 0), 0);
+  const grossLoss = Math.abs(closedTrades.reduce((s, t) => s + (t.pnl_amount < 0 ? t.pnl_amount : 0), 0));
+  const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss).toFixed(2) : grossProfit > 0 ? 'MAX' : '0.00';
+  
+  const netPnl = (grossProfit - grossLoss).toFixed(2);
+  const avgRisk = trades.length > 0 ? (trades.reduce((s,t) => s + parseFloat(t.risk_percent), 0) / trades.length).toFixed(2) : 0;
   const dangerCount = trades.filter(t => t.risk_level==='danger').length;
+  
   const sessionCounts = trades.reduce((acc,t) => { acc[t.session]=(acc[t.session]||0)+1; return acc; }, {});
+  const sessionWins = closedTrades.reduce((acc,t) => { 
+    if (!acc[t.session]) acc[t.session] = { total:0, wins:0 };
+    acc[t.session].total++;
+    if (t.is_win) acc[t.session].wins++;
+    return acc;
+  }, {});
 
   return (
     <div style={{ padding:'20px 16px 110px', display:'flex', flexDirection:'column', gap:14, maxWidth:520, margin:'0 auto' }} className="fade-up">
@@ -83,11 +148,17 @@ export default function Dashboard({ user }) {
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }} className="stagger">
-        <StatCard label="Total Trades" value={loading?'—':totalTrades} icon="📋" color="var(--text)" />
+        <StatCard label="Win Rate" value={loading?'—':`${winRate}%`} icon="🎯" color="var(--gold)" />
+        <StatCard label="Profit Factor" value={loading?'—':profitFactor} icon="💹" color={parseFloat(profitFactor)>=1.5?'var(--green)':'var(--amber)'} />
+        <StatCard label="Net P/L" value={loading?'—':`${netPnl>0?'+':''}$${netPnl}`} icon="💰" color={netPnl>=0?'var(--green)':'var(--red)'} />
         <StatCard label="Avg Risk %" value={loading?'—':`${avgRisk}%`} icon="⚖" color={parseFloat(avgRisk)<=2?'var(--green)':parseFloat(avgRisk)<=3?'var(--amber)':'var(--red)'} />
-        <StatCard label="Highest Risk" value={loading?'—':`${maxRisk}%`} icon="🔺" color={parseFloat(maxRisk)>3?'var(--red)':'var(--amber)'} />
-        <StatCard label="Safe Rate" value={loading?'—':`${safeRate}%`} icon="🛡" color="var(--green)" />
       </div>
+
+      {!loading && closedTrades.length > 1 && (
+        <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 16px' }}>
+          <EquityCurve trades={closedTrades} />
+        </div>
+      )}
 
       {dangerCount > 0 && !loading && (
         <div style={{ padding:14, background:'var(--red-dim)', border:'1px solid rgba(255,61,87,0.25)', borderRadius:'var(--radius)' }} className="fade-up">
@@ -101,18 +172,20 @@ export default function Dashboard({ user }) {
         </div>
       )}
 
-      {totalTrades > 0 && !loading && (
+      {trades.length > 0 && !loading && (
         <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 16px' }}>
           <p style={{ fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.14em', marginBottom:14 }}>SESSION ACTIVITY</p>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {[['London','🇬🇧','var(--amber)'],['New York','🗽','var(--red)'],['Asia','🌏','var(--blue)']].map(([key,icon,color]) => {
               const count = sessionCounts[key]||0;
-              const pct = totalTrades > 0 ? (count/totalTrades)*100 : 0;
+              const stats = sessionWins[key] || { total:0, wins:0 };
+              const wr = stats.total > 0 ? (stats.wins/stats.total*100).toFixed(0) : 0;
+              const pct = trades.length > 0 ? (count/trades.length)*100 : 0;
               return (
                 <div key={key}>
                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
                     <span style={{ fontSize:12, color:'var(--text-sub)' }}>{icon} {key}</span>
-                    <span className="font-data" style={{ fontSize:12, color }}>{count} trade{count!==1?'s':''} · {pct.toFixed(0)}%</span>
+                    <span className="font-data" style={{ fontSize:12, color }}>{count} T · {wr}% WR</span>
                   </div>
                   <div style={{ height:4, background:'var(--surface-top)', borderRadius:4 }}>
                     <div style={{ height:'100%', background:color, borderRadius:4, width:`${pct}%`, transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
@@ -127,7 +200,7 @@ export default function Dashboard({ user }) {
       <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 16px' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
           <p style={{ fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.14em' }}>RECENT TRADES</p>
-          {totalTrades > 10 && <span className="font-data" style={{ fontSize:11, color:'var(--text-muted)' }}>Showing 10 of {totalTrades}</span>}
+          {trades.length > 10 && <span className="font-data" style={{ fontSize:11, color:'var(--text-muted)' }}>Showing 10 of {trades.length}</span>}
         </div>
         <TradeHistory trades={trades} loading={loading} limit={10} />
       </div>

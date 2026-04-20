@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import Calculator from './pages/Calculator';
+import Journal from './pages/Journal';
 import Dashboard from './pages/Dashboard';
 import AuthScreen from './components/AuthScreen';
 import AppHeader from './components/AppHeader';
@@ -37,8 +38,9 @@ export default function App() {
   return (
     <div style={{ maxWidth: 520, margin: '0 auto', minHeight: '100vh', background: 'var(--bg-1)', position: 'relative' }}>
       <AppHeader user={user} onSignOut={() => setUser(null)} />
-      <main>
+      <main style={{ paddingBottom: 80 }}>
         {tab === 'calc' && <Calculator user={user} />}
+        {tab === 'journal' && <Journal user={user} />}
         {tab === 'dashboard' && <Dashboard user={user} />}
       </main>
       <TabBar active={tab} setActive={setTab} />

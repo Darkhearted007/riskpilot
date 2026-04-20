@@ -1,11 +1,21 @@
 export default function TabBar({ active, setActive }) {
   const tabs = [
-    { id: 'calc', icon: '◈', label: 'Calculator' },
+    { id: 'calc',      icon: '◈', label: 'Calculator' },
+    { id: 'journal',   icon: '📝', label: 'Journal' },
     { id: 'dashboard', icon: '▦', label: 'Dashboard' },
   ];
   return (
-    <nav style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: 'var(--surface)', borderTop: '1px solid var(--border)', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, maxWidth: 520, margin: '0 auto' }}>
-      <div style={{ position: 'absolute', top: 0, left: active === 'calc' ? '0%' : '50%', width: '50%', height: 2, background: 'var(--gold)', boxShadow: '0 0 8px var(--gold-glow)', transition: 'left 0.3s cubic-bezier(0.16,1,0.3,1)' }} />
+    <nav style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: 'var(--surface)', borderTop: '1px solid var(--border)', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, maxWidth: 520, margin: '0 auto' }}>
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: active === 'calc' ? '0%' : active === 'journal' ? '33.33%' : '66.66%',
+        width: '33.33%',
+        height: 2,
+        background: 'var(--gold)',
+        boxShadow: '0 0 8px var(--gold-glow)',
+        transition: 'left 0.3s cubic-bezier(0.16,1,0.3,1)'
+      }} />
       {tabs.map((t) => (
         <button
           key={t.id}
