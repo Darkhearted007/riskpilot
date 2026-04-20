@@ -4,9 +4,19 @@ import { calculateDisciplineScore } from '../lib/riskEngine';
 import DisciplineScore from '../components/DisciplineScore';
 import TradeHistory from '../components/TradeHistory';
 
-function EquityCurve({ trades }) {
+function EquityCurve({ trades, isLocked }) {
   if (trades.length < 2) return null;
   
+  if (isLocked) {
+    return (
+      <div style={{ marginTop:14, position:'relative', height:100, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'var(--bg-1)', borderRadius:'var(--radius)', border:'1px dashed var(--border)' }}>
+        <p style={{ fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.14em', marginBottom:8 }}>EQUITY CURVE</p>
+        <div style={{ color:'var(--gold)', fontSize:18, marginBottom:4 }}>🔒</div>
+        <p style={{ fontSize:10, color:'var(--text-muted)' }}>UPGRADE TO UNLOCK</p>
+      </div>
+    );
+  }
+
   // Calculate cumulative P/L
   const points = trades
     .slice()
@@ -38,7 +48,6 @@ function EquityCurve({ trades }) {
         <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ width:'100%', height:'100%', overflow:'visible' }}>
           {/* Zero Line */}
           <line x1="0" y1={zeroY} x2={width} y2={zeroY} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2" />
-          {/* Gradient */}
           <defs>
             <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.3" />
@@ -46,7 +55,6 @@ function EquityCurve({ trades }) {
             </linearGradient>
           </defs>
           <path d={`M 0,${zeroY} L ${svgPoints} L ${width},${height} L 0,${height} Z`} fill="url(#curveGradient)" />
-          {/* Path */}
           <polyline points={svgPoints} fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ filter:'drop-shadow(0 0 4px var(--gold-glow))' }} />
         </svg>
       </div>
@@ -64,7 +72,7 @@ function StatCard({ label, value, icon, color }) {
   );
 }
 
-export default function Dashboard({ user }) {
+export default function Dashboard({ user, isGold }) {
   const [trades,    setTrades]    = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState('');
@@ -95,13 +103,11 @@ export default function Dashboard({ user }) {
   }, [user.id]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTrades();
   }, [fetchTrades]);
 
   const disciplineData = calculateDisciplineScore(trades);
   
-  // Performance Stats
   const closedTrades = trades.filter(t => t.status === 'closed');
   const wins = closedTrades.filter(t => t.is_win);
   const winRate = closedTrades.length > 0 ? (wins.length / closedTrades.length * 100).toFixed(0) : 0;
@@ -134,8 +140,6 @@ export default function Dashboard({ user }) {
         </button>
       </div>
 
-      {lastFetch && <p style={{ fontSize:11, color:'var(--text-muted)', fontFamily:'var(--font-data)', marginTop:-6 }}>Last synced {lastFetch.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>}
-
       {error && (
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 14px', background:'var(--red-dim)', border:'1px solid rgba(255,61,87,0.3)', borderRadius:'var(--radius)', fontSize:13, color:'var(--red)' }}>
           <span>{error}</span>
@@ -151,29 +155,21 @@ export default function Dashboard({ user }) {
         <StatCard label="Win Rate" value={loading?'—':`${winRate}%`} icon="🎯" color="var(--gold)" />
         <StatCard label="Profit Factor" value={loading?'—':profitFactor} icon="💹" color={parseFloat(profitFactor)>=1.5?'var(--green)':'var(--amber)'} />
         <StatCard label="Net P/L" value={loading?'—':`${netPnl>0?'+':''}$${netPnl}`} icon="💰" color={netPnl>=0?'var(--green)':'var(--red)'} />
-        <StatCard label="Avg Risk %" value={loading?'—':`${avgRisk}%`} icon="⚖" color={parseFloat(avgRisk)<=2?'var(--green)':parseFloat(avgRisk)<=3?'var(--amber)':'var(--red)'} />
+        <StatCard label="Avg Risk %" value={loading?'—':`${avgRisk}%`} icon="⚖" color="var(--text-sub)" />
       </div>
 
       {!loading && closedTrades.length > 1 && (
         <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 16px' }}>
-          <EquityCurve trades={closedTrades} />
-        </div>
-      )}
-
-      {dangerCount > 0 && !loading && (
-        <div style={{ padding:14, background:'var(--red-dim)', border:'1px solid rgba(255,61,87,0.25)', borderRadius:'var(--radius)' }} className="fade-up">
-          <div style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
-            <span style={{ fontSize:18 }}>🚨</span>
-            <div>
-              <p style={{ fontSize:13, fontWeight:700, color:'var(--red)', marginBottom:2 }}>{dangerCount} danger-level trade{dangerCount!==1?'s':''} detected</p>
-              <p style={{ fontSize:12, color:'var(--text-sub)' }}>Review your high-risk entries. Consistent over-risking depletes accounts faster than bad setups.</p>
-            </div>
-          </div>
+          <EquityCurve trades={closedTrades} isLocked={!isGold} />
         </div>
       )}
 
       {trades.length > 0 && !loading && (
-        <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 16px' }}>
+        <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 16px', position:'relative', overflow:'hidden' }}>
+          {!isGold && <div style={{ position:'absolute', inset:0, background:'rgba(15,21,32,0.8)', backdropFilter:'blur(4px)', zIndex:2, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:20 }}>
+            <span style={{ fontSize:20, marginBottom:8 }}>🔒</span>
+            <p style={{ fontFamily:'var(--font-data)', fontSize:10, fontWeight:700, color:'var(--gold)' }}>SESSION ANALYTICS LOCKED</p>
+          </div>}
           <p style={{ fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.14em', marginBottom:14 }}>SESSION ACTIVITY</p>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {[['London','🇬🇧','var(--amber)'],['New York','🗽','var(--red)'],['Asia','🌏','var(--blue)']].map(([key,icon,color]) => {
@@ -188,7 +184,7 @@ export default function Dashboard({ user }) {
                     <span className="font-data" style={{ fontSize:12, color }}>{count} T · {wr}% WR</span>
                   </div>
                   <div style={{ height:4, background:'var(--surface-top)', borderRadius:4 }}>
-                    <div style={{ height:'100%', background:color, borderRadius:4, width:`${pct}%`, transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
+                    <div style={{ height:'100%', background:color, borderRadius:4, width:`${pct}%`, transition:'width 0.8s' }} />
                   </div>
                 </div>
               );
@@ -198,10 +194,7 @@ export default function Dashboard({ user }) {
       )}
 
       <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'18px 16px' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-          <p style={{ fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.14em' }}>RECENT TRADES</p>
-          {trades.length > 10 && <span className="font-data" style={{ fontSize:11, color:'var(--text-muted)' }}>Showing 10 of {trades.length}</span>}
-        </div>
+        <p style={{ fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.14em', marginBottom:16 }}>RECENT TRADES</p>
         <TradeHistory trades={trades} loading={loading} limit={10} />
       </div>
     </div>

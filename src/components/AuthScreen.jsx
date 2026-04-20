@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { Pixel } from '../lib/marketing';
 
 function AuthInput({ type, value, onChange, placeholder, onKeyDown }) {
   const [focused, setFocused] = useState(false);
@@ -48,6 +49,10 @@ export default function AuthScreen({ onAuth }) {
       if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
+        
+        // Track Signup as a Lead for Ads Optimization
+        Pixel.trackLead();
+        
         setSuccess('Account created! Check your email to confirm, then sign in.');
         setMode('login');
       } else if (mode === 'login') {
