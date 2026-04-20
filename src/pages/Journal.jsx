@@ -10,11 +10,13 @@ function TradeCard({ trade, onRefresh }) {
     if (!exitPrice || isNaN(exitPrice)) return;
     setLoading(true);
     
+    // XAUUSD Profit Calc: (Exit - Entry) / 0.1 * (LotSize * 1)
+    // Paystack/Supabase Note: Smallest movement is 0.1 (1 pip). 1 slot = $1 per 0.1 move.
     const ep = parseFloat(trade.entry_price);
     const xp = parseFloat(exitPrice);
     const isBuy = trade.direction === 'BUY';
     const pips = isBuy ? (xp - ep) / 0.1 : (ep - xp) / 0.1;
-    const pnl = pips * (trade.lot_size * 10); // $10 per lot per pip
+    const pnl = pips * (trade.lot_size * 1); // Standardized Gold pip value
     const win = pnl > 0;
 
     const { error } = await supabase
@@ -107,7 +109,7 @@ function TradeCard({ trade, onRefresh }) {
   );
 }
 
-export default function Journal({ user }) {
+export default function Journal({ user, isGold }) {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -125,7 +127,6 @@ export default function Journal({ user }) {
   }, [user.id]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTrades();
   }, [fetchTrades]);
 
@@ -160,9 +161,20 @@ export default function Journal({ user }) {
           )}
 
           {closedTrades.length > 0 && (
-            <section style={{ display:'flex', flexDirection:'column', gap:12 }}>
-              <p style={{ fontSize:10, fontWeight:700, color:'var(--text-muted)', letterSpacing:'0.1em' }}>HISTORICAL LOGS</p>
-              {closedTrades.map(t => <TradeCard key={t.id} trade={t} onRefresh={fetchTrades} />)}
+            <section style={{ display:'flex', flexDirection:'column', gap:12, position:'relative' }}>
+              <p style={{ fontSize:10, fontWeight:700, color:'var(--text-muted)', letterSpacing:'0.1em' }}>HISTORICAL LOGS ({closedTrades.length})</p>
+              
+              {!isGold && (
+                <div style={{ position:'absolute', inset:'24px 0 0', background:'rgba(8,11,15,0.7)', backdropFilter:'blur(4px)', zIndex:10, borderRadius:'var(--radius-lg)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', border:'1px dashed var(--gold-dim)', padding:20, textAlign:'center' }}>
+                  <span style={{ fontSize:24, marginBottom:8 }}>🔒</span>
+                  <p style={{ color:'var(--gold)', fontSize:14, fontWeight:700, fontFamily:'var(--font-data)' }}>HISTORY LOCKED</p>
+                  <p style={{ color:'var(--text-sub)', fontSize:11, marginTop:4 }}>Upgrade to Gold to unlock your full trade history and performance analytics.</p>
+                </div>
+              )}
+
+              <div style={{ display:'flex', flexDirection:'column', gap:12, opacity: isGold ? 1 : 0.2, pointerEvents: isGold ? 'auto' : 'none' }}>
+                {closedTrades.slice(0, isGold ? 100 : 2).map(t => <TradeCard key={t.id} trade={t} onRefresh={fetchTrades} />)}
+              </div>
             </section>
           )}
         </div>

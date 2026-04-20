@@ -11,11 +11,14 @@ const S = {
     alignItems: 'center',
     padding: '60px 20px',
     textAlign: 'center',
+    position: 'relative',
+    overflow: 'hidden',
   },
   hero: {
     maxWidth: 700,
     marginTop: 40,
     position: 'relative',
+    zIndex: 2,
   },
   glow: {
     position: 'absolute',
@@ -65,7 +68,7 @@ const S = {
     gap: 16,
     width: '100%',
     maxWidth: 400,
-    zIndex: 1,
+    zIndex: 2,
   },
   btnPrimary: {
     background: 'var(--gold)',
@@ -81,17 +84,6 @@ const S = {
     transition: 'all 0.2s',
     boxShadow: '0 8px 32px rgba(212,175,55,0.2)',
   },
-  btnSecondary: {
-    background: 'var(--surface-high)',
-    color: 'var(--text)',
-    padding: '16px 32px',
-    borderRadius: 'var(--radius)',
-    border: '1px solid var(--border)',
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontFamily: 'var(--font-data)',
-  },
   pricingCard: {
     background: 'var(--surface)',
     border: '1px solid var(--border-gold)',
@@ -103,6 +95,7 @@ const S = {
     position: 'relative',
     overflow: 'hidden',
     boxShadow: 'var(--shadow-gold)',
+    zIndex: 2,
   },
   priceTag: {
     fontSize: 48,
@@ -114,45 +107,51 @@ const S = {
     justifyContent: 'center',
     gap: 4,
   },
-  oldPrice: {
-    fontSize: 16,
-    color: 'var(--text-muted)',
-    textDecoration: 'line-through',
-    marginBottom: 8,
-  },
-  features: {
-    marginTop: 80,
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: 20,
+  footer: {
+    marginTop: 100,
+    borderTop: '1px solid var(--border)',
+    paddingTop: 40,
     width: '100%',
-    maxWidth: 800,
+    maxWidth: 600,
+    zIndex: 2,
   },
-  featureItem: {
+  legal: {
+    fontSize: 10,
+    color: 'var(--text-muted)',
+    lineHeight: 1.6,
+    fontFamily: 'var(--font-data)',
+    marginTop: 20,
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
     gap: 8,
   },
-  featureIcon: {
-    fontSize: 24,
-    marginBottom: 4,
+  modal: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(8,11,15,0.95)',
+    backdropFilter: 'blur(10px)',
+    zIndex: 1000,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
-  featureText: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: 'var(--text-sub)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
+  modalContent: {
+    background: 'var(--bg-2)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-xl)',
+    padding: 32,
+    maxWidth: 500,
+    maxHeight: '80vh',
+    overflowY: 'auto',
+    textAlign: 'left',
   }
 };
 
 export default function LandingPage({ onGetStarted }) {
-  const [attribution, setAttribution] = useState({ source: 'organic' });
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   useEffect(() => {
-    const attr = getAttribution();
-    setAttribution(attr);
     Pixel.track('PageView');
   }, []);
 
@@ -186,45 +185,52 @@ export default function LandingPage({ onGetStarted }) {
         <div style={{ position: 'absolute', top: 12, right: -30, background: 'var(--red)', color: '#fff', fontSize: 10, fontWeight: 800, padding: '4px 40px', transform: 'rotate(45deg)' }}>
           LAUNCH OFFER
         </div>
-        <p style={S.oldPrice}>Regularly $97</p>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', textDecoration: 'line-through', marginBottom: 8 }}>Regularly $97</p>
         <div style={S.priceTag}>
           <span style={{ fontSize: 24 }}>$</span>47
           <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>/ LIFETIME</span>
         </div>
         <p style={{ fontSize: 12, color: 'var(--text-sub)', marginTop: 12, marginBottom: 24 }}>
-          One-time payment. No subscriptions. <br/>All future updates included.
+          One-time payment. All future updates included.
         </p>
-        <ul style={{ listSetStyle: 'none', padding: 0, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-          {['Unlimited Calculations', 'Advanced Journaling', 'Discipline Analytics', 'Equity Curve Tracking'].map((f) => (
-            <li key={f} style={{ fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ color: 'var(--green)' }}>✓</span> {f}
-            </li>
-          ))}
-        </ul>
+        <button style={S.btnPrimary} onClick={handleJoin}>UNLOOCK GOLD ACCESS</button>
       </div>
 
-      <div style={S.features}>
-        <Feature icon="🛡" label="Risk Shield" />
-        <Feature icon="🎯" label="Precision Lots" />
-        <Feature icon="🧠" label="Emotion Logs" />
-        <Feature icon="💹" label="Equity Curve" />
-      </div>
-
-      <footer style={{ marginTop: 100, borderTop: '1px solid var(--border)', paddingTop: 40, width: '100%', maxWidth: 500 }}>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          RiskPilot is a trading utility and does not guarantee profits. <br/>
-          Trading involves high risk. Never risk money you cannot afford to lose.
-        </p>
+      <footer style={S.footer}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 20 }}>
+          <button onClick={() => setShowPrivacy(true)} style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font-data)' }}>PRIVACY POLICY</button>
+          <button onClick={() => setShowPrivacy(true)} style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font-data)' }}>TERMS OF SERVICE</button>
+        </div>
+        <div style={S.legal}>
+          <p>RiskPilot is a software utility and does not provide financial advice, trading signals, or investment strategies.</p>
+          <p>Trading Gold (XAUUSD) involves significant risk of loss. Past performance does not guarantee future results.</p>
+          <p>© 2026 RiskPilot Gold. Built for Professional Discipline.</p>
+        </div>
       </footer>
+
+      {showPrivacy && (
+        <div style={S.modal} onClick={() => setShowPrivacy(false)}>
+          <div style={S.modalContent} onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 20 }}>Privacy & Terms</h2>
+            <div style={{ fontSize: 13, color: 'var(--text-sub)', display: 'flex', flexDirection: 'column', gap: 16, lineHeight: 1.6 }}>
+              <p><strong>1. Data Collection:</strong> We collect only your email address for account management. We do not sell your data to third parties.</p>
+              <p><strong>2. Payment:</strong> Payments are processed securely via Paystack. We do not store your credit card details.</p>
+              <p><strong>3. Tracking:</strong> We use the Meta Pixel to improve our advertising performance. You can opt-out via Facebook settings.</p>
+              <p><strong>4. Disclaimer:</strong> RiskPilot is a mathematical tool. You are solely responsible for your trading decisions and any resulting financial loss.</p>
+            </div>
+            <button onClick={() => setShowPrivacy(false)} style={{ marginTop: 30, width: '100%', padding: '12px', background: 'var(--gold)', border: 'none', borderRadius: 'var(--radius)', fontWeight: 700, cursor: 'pointer' }}>CLOSE</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function Feature({ icon, label }) {
   return (
-    <div style={S.featureItem}>
-      <span style={S.featureIcon}>{icon}</span>
-      <span style={S.featureText}>{label}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 24 }}>{icon}</span>
+      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-sub)', textTransform: 'uppercase' }}>{label}</span>
     </div>
   );
 }
