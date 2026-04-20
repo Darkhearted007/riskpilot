@@ -8,7 +8,7 @@
 // - Modern forex terminal feel
 // ─────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase }           from '../lib/supabaseClient';
 import { calculateGoldLotSize, getTradeWarnings, XAUUSD_POINT, XAUUSD_PIP_VALUE } from '../lib/riskEngine';
 import { getSessionInfo }     from '../lib/sessionDetector';
@@ -179,10 +179,59 @@ export default function Calculator({ user }) {
   const [notes,     setNotes]     = useState('');
 
   // ── Computed ─────────────────────────────────────────────
-  const [result,   setResult]   = useState(null);
-  const [warnings, setWarnings] = useState([]);
   const [session,  setSession]  = useState(null);
-  const [derived,  setDerived]  = useState(null); // price-based metrics
+
+  // Derived metrics — computed on every render (memoized for performance)
+  const { result, warnings, derived } = useMemo(() => {
+    const b    = parseFloat(balance);
+    const r    = parseFloat(riskPct);
+    const entP = parseFloat(entry);
+    const slP  = parseFloat(sl);
+    const tpP  = parseFloat(tp);
+
+    // Validate direction logic
+    const isBuy   = direction === 'BUY';
+    const slValid = isBuy ? slP < entP : slP > entP;
+    const tpValid = tpP > 0 ? (isBuy ? tpP > entP : tpP < entP) : true;
+
+    if (b > 0 && r > 0 && entP > 0 && slP > 0 && slValid) {
+      // Calculate pip distances from price
+      const slDist = Math.abs(entP - slP);
+      const slPips = priceToPips(slDist);
+      const tpPips = tpP > 0 && tpValid ? priceToPips(Math.abs(tpP - entP)) : 0;
+      const rrr    = tpPips > 0 ? tpPips / slPips : 0;
+
+      // Run lot size calculation
+      const calcResult = calculateGoldLotSize(b, r, slPips);
+      const traps      = getTradeWarnings(r, slPips);
+
+      // Derived price metrics
+      const riskAmt   = b * (r / 100);
+      const potProfit = tpPips > 0 ? riskAmt * rrr : 0;
+
+      return {
+        result: calcResult,
+        warnings: traps,
+        derived: {
+          slDist:    fmt(slDist, 2),
+          slPips:    fmt(slPips, 1),
+          tpPips:    tpPips > 0 ? fmt(tpPips, 1) : null,
+          rrr:       rrr > 0 ? rrr : null,
+          potProfit: potProfit > 0 ? potProfit : null,
+          slValid,
+          tpValid,
+          rawSlPips: slPips,
+          rawTpPips: tpPips,
+        }
+      };
+    }
+
+    return {
+      result: null,
+      warnings: [],
+      derived: entP > 0 && slP > 0 && !slValid ? { slError: true, isBuy } : null
+    };
+  }, [balance, riskPct, entry, sl, tp, direction]);
 
   // ── UI state ─────────────────────────────────────────────
   const [saving,    setSaving]    = useState(false);
@@ -196,56 +245,6 @@ export default function Calculator({ user }) {
     const interval = setInterval(update, 60_000);
     return () => clearInterval(interval);
   }, []);
-
-  // Core calculation — runs on every input change
-  useEffect(() => {
-    const b    = parseFloat(balance);
-    const r    = parseFloat(riskPct);
-    const entP = parseFloat(entry);
-    const slP  = parseFloat(sl);
-    const tpP  = parseFloat(tp);
-
-    // Validate direction logic
-    const isBuy  = direction === 'BUY';
-    const slValid = isBuy ? slP < entP : slP > entP;
-    const tpValid = tpP > 0 ? (isBuy ? tpP > entP : tpP < entP) : true;
-
-    if (b > 0 && r > 0 && entP > 0 && slP > 0 && slValid) {
-      // Calculate pip distances from price
-      const slDist   = Math.abs(entP - slP);
-      const slPips   = priceToPips(slDist);
-      const tpPips   = tpP > 0 && tpValid ? priceToPips(Math.abs(tpP - entP)) : 0;
-      const rrr      = tpPips > 0 ? tpPips / slPips : 0;
-
-      // Run lot size calculation
-      const calc = calculateGoldLotSize(b, r, slPips);
-      setResult(calc);
-      setWarnings(getTradeWarnings(r, slPips));
-
-      // Derived price metrics
-      const riskAmt   = b * (r / 100);
-      const potProfit = tpPips > 0 ? riskAmt * rrr : 0;
-      const breakeven = isBuy
-        ? entP + (slDist * (r / 100))   // simplified BE adjustment
-        : entP - (slDist * (r / 100));
-
-      setDerived({
-        slDist:    fmt(slDist, 2),
-        slPips:    fmt(slPips, 1),
-        tpPips:    tpPips > 0 ? fmt(tpPips, 1) : null,
-        rrr:       rrr > 0 ? rrr : null,
-        potProfit: potProfit > 0 ? potProfit : null,
-        slValid,
-        tpValid,
-        rawSlPips: slPips,
-        rawTpPips: tpPips,
-      });
-    } else {
-      setResult(null);
-      setWarnings([]);
-      setDerived(entP > 0 && slP > 0 && !slValid ? { slError: true, isBuy } : null);
-    }
-  }, [balance, riskPct, entry, sl, tp, direction]);
 
   // Save trade to Supabase
   const handleSave = useCallback(async () => {

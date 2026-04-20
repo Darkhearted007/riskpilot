@@ -5,10 +5,14 @@ export default function RiskAlert({ warnings }) {
 
   useEffect(() => {
     if (warnings && warnings.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(false);
       const t = setTimeout(() => setVisible(true), 50);
       return () => clearTimeout(t);
-    } else { setVisible(false); }
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setVisible(false);
+    }
   }, [warnings]);
 
   if (!warnings || warnings.length === 0 || !visible) return null;
