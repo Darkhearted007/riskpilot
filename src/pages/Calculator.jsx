@@ -10,14 +10,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase }           from '../lib/supabaseClient';
-import { calculateGoldLotSize, getTradeWarnings } from '../lib/riskEngine';
+import { calculateGoldLotSize, getTradeWarnings, XAUUSD_POINT, XAUUSD_PIP_VALUE } from '../lib/riskEngine';
 import { getSessionInfo }     from '../lib/sessionDetector';
 import RiskAlert              from '../components/RiskAlert';
 
 // ── Constants ─────────────────────────────────────────────────
 // XAUUSD: 1 pip = $0.10 price movement (standard broker definition)
 // Pip value per 1.0 standard lot = $10
-const XAUUSD_POINT = 0.1; // 1 pip = $0.10 on Gold
+// Point value per lot is managed in riskEngine.js
 
 const LEVEL_STYLE = {
   safe:       { color:'var(--green)', bg:'var(--green-dim)', border:'rgba(0,230,118,0.2)',  label:'SAFE',     icon:'🛡' },

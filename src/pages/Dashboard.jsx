@@ -20,15 +20,34 @@ export default function Dashboard({ user }) {
   const [error,     setError]     = useState('');
   const [lastFetch, setLastFetch] = useState(null);
 
-  const fetchTrades = useCallback(async () => {
-    setLoading(true); setError('');
-    const { data, error: fetchError } = await supabase.from('trades').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(100);
-    if (fetchError) { setError('Failed to load trades. Check your connection.'); }
-    else { setTrades(data || []); setLastFetch(new Date()); }
-    setLoading(false);
+  const fetchTrades = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setLoading(true);
+    setError('');
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (fetchError) {
+        setError('Failed to load trades. Check your connection.');
+      } else {
+        setTrades(data || []);
+        setLastFetch(new Date());
+      }
+    } catch (err) {
+      setError('An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
   }, [user.id]);
 
-  useEffect(() => { fetchTrades(); }, [fetchTrades]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchTrades();
+  }, [fetchTrades]);
 
   const disciplineData = calculateDisciplineScore(trades);
   const totalTrades = trades.length;
@@ -45,7 +64,7 @@ export default function Dashboard({ user }) {
           <p style={{ fontFamily:'var(--font-data)', fontSize:10, color:'var(--gold)', letterSpacing:'0.16em', marginBottom:4 }}>PERFORMANCE</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:26, fontWeight:700, lineHeight:1.1 }}>Dashboard</h1>
         </div>
-        <button onClick={fetchTrades} disabled={loading} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', color:'var(--text-sub)', width:36, height:36, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <button onClick={() => fetchTrades(true)} disabled={loading} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', color:'var(--text-sub)', width:36, height:36, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <span style={loading?{display:'inline-block',animation:'spin 0.8s linear infinite'}:{}}>↻</span>
         </button>
       </div>
@@ -55,7 +74,7 @@ export default function Dashboard({ user }) {
       {error && (
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 14px', background:'var(--red-dim)', border:'1px solid rgba(255,61,87,0.3)', borderRadius:'var(--radius)', fontSize:13, color:'var(--red)' }}>
           <span>{error}</span>
-          <button onClick={fetchTrades} style={{ background:'transparent', border:'1px solid var(--red)', borderRadius:'var(--radius-sm)', color:'var(--red)', fontSize:11, fontWeight:700, padding:'4px 10px', cursor:'pointer' }}>Retry</button>
+          <button onClick={() => fetchTrades(true)} style={{ background:'transparent', border:'1px solid var(--red)', borderRadius:'var(--radius-sm)', color:'var(--red)', fontSize:11, fontWeight:700, padding:'4px 10px', cursor:'pointer' }}>Retry</button>
         </div>
       )}
 

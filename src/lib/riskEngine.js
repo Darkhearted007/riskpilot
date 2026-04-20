@@ -1,3 +1,7 @@
+// XAUUSD Constants
+// 1 pip = $0.10 price movement on Gold (at 2 decimal places)
+// 1.0 standard lot = $10.00 value per pip
+export const XAUUSD_POINT     = 0.1;
 export const XAUUSD_PIP_VALUE = 10;
 
 export function classifyRiskLevel(riskPercent) {
