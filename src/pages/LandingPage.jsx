@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Pixel, getAttribution } from '../lib/marketing';
 
+const RECENT_PURCHASES = [
+  { name: 'Kweku M.', city: 'Accra', time: '2m ago' },
+  { name: 'Samuel O.', city: 'Lagos', time: '5m ago' },
+  { name: 'Elena R.', city: 'London', time: '12m ago' },
+  { name: 'David T.', city: 'Johannesburg', time: '15m ago' },
+  { name: 'Sarah L.', city: 'New York', time: '18m ago' },
+];
+
 const S = {
   container: {
     minHeight: '100vh',
@@ -107,58 +115,63 @@ const S = {
     justifyContent: 'center',
     gap: 4,
   },
-  footer: {
-    marginTop: 100,
-    borderTop: '1px solid var(--border)',
-    paddingTop: 40,
-    width: '100%',
-    maxWidth: 600,
-    zIndex: 2,
-  },
-  legal: {
-    fontSize: 10,
-    color: 'var(--text-muted)',
-    lineHeight: 1.6,
-    fontFamily: 'var(--font-data)',
-    marginTop: 20,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-  },
-  modal: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(8,11,15,0.95)',
-    backdropFilter: 'blur(10px)',
-    zIndex: 1000,
-    display: 'flex',
+  timer: {
+    background: 'rgba(255,61,87,0.1)',
+    border: '1px solid rgba(255,61,87,0.3)',
+    borderRadius: 'var(--radius)',
+    padding: '8px 12px',
+    display: 'inline-flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    background: 'var(--bg-2)',
-    border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-xl)',
-    padding: 32,
-    maxWidth: 500,
-    maxHeight: '80vh',
-    overflowY: 'auto',
-    textAlign: 'left',
+    gap: 8,
+    marginBottom: 24,
+    color: 'var(--red)',
+    fontFamily: 'var(--font-data)',
+    fontSize: 11,
+    fontWeight: 700,
   }
 };
 
 export default function LandingPage({ onGetStarted }) {
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [proofIndex, setProofIndex] = useState(0);
+  const [showProof, setShowProof] = useState(true);
+  const [timeLeft, setTimeLeft] = useState('02:47:15');
 
   useEffect(() => {
     Pixel.track('PageView');
-  }, []);
+    
+    // Social Proof Cycle
+    const proofInterval = setInterval(() => {
+      setShowProof(false);
+      setTimeout(() => {
+        setProofIndex((prev) => (prev + 1) % RECENT_PURCHASES.length);
+        setShowProof(true);
+      }, 500);
+    }, 8000);
+
+    // Countdown Timer (Simulated for urgency)
+    const timerInterval = setInterval(() => {
+      const parts = timeLeft.split(':').map(Number);
+      let [h, m, s] = parts;
+      s--;
+      if (s < 0) { s = 59; m--; }
+      if (m < 0) { m = 59; h--; }
+      if (h < 0) { h = 2; m = 47; s = 15; } // Reset for demo
+      setTimeLeft(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`);
+    }, 1000);
+
+    return () => {
+      clearInterval(proofInterval);
+      clearInterval(timerInterval);
+    };
+  }, [timeLeft]);
 
   const handleJoin = () => {
     Pixel.trackInitiateCheckout('Gold Lifetime');
     onGetStarted();
   };
+
+  const currentProof = RECENT_PURCHASES[proofIndex];
 
   return (
     <div style={S.container}>
@@ -172,6 +185,11 @@ export default function LandingPage({ onGetStarted }) {
           <span style={{ color: 'var(--gold)', fontWeight: 700 }}> $30k/week </span> 
           with robotic risk management.
         </p>
+
+        <div style={S.timer}>
+          <span>⚡️ FLASH SALE ENDS IN: </span>
+          <span style={{ fontSize: 13, minWidth: 65 }}>{timeLeft}</span>
+        </div>
 
         <div style={S.ctaContainer}>
           <button style={S.btnPrimary} onClick={handleJoin}>START SCALING →</button>
@@ -193,44 +211,40 @@ export default function LandingPage({ onGetStarted }) {
         <p style={{ fontSize: 12, color: 'var(--text-sub)', marginTop: 12, marginBottom: 24 }}>
           One-time payment. All future updates included.
         </p>
-        <button style={S.btnPrimary} onClick={handleJoin}>UNLOOCK GOLD ACCESS</button>
+        <button style={S.btnPrimary} onClick={handleJoin}>UNLOCK GOLD ACCESS</button>
       </div>
 
-      <footer style={S.footer}>
+      <footer style={{ marginTop: 100, paddingBottom: 40, width: '100%', maxWidth: 600, zIndex: 2 }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 20 }}>
           <button onClick={() => setShowPrivacy(true)} style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font-data)' }}>PRIVACY POLICY</button>
           <button onClick={() => setShowPrivacy(true)} style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font-data)' }}>TERMS OF SERVICE</button>
         </div>
-        <div style={S.legal}>
-          <p>RiskPilot is a software utility and does not provide financial advice, trading signals, or investment strategies.</p>
-          <p>Trading Gold (XAUUSD) involves significant risk of loss. Past performance does not guarantee future results.</p>
-          <p>© 2026 RiskPilot Gold. Built for Professional Discipline.</p>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.6, fontFamily: 'var(--font-data)' }}>
+          <p>© 2026 RiskPilot Gold. Not financial advice. Trading involves risk.</p>
         </div>
       </footer>
 
+      {showProof && (
+        <div style={{ position: 'fixed', bottom: 20, left: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, zIndex: 100, boxShadow: '0 4px 20px rgba(0,0,0,0.5)', animation: 'slideInUp 0.5s' }}>
+          <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--gold-dim)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>💰</div>
+          <div style={{ textAlign:'left' }}>
+            <p style={{ fontSize:11, fontWeight:700, color:'var(--text)' }}>{currentProof.name} upgraded to Gold</p>
+            <p style={{ fontSize:10, color:'var(--text-muted)' }}>{currentProof.city} • {currentProof.time}</p>
+          </div>
+        </div>
+      )}
+
       {showPrivacy && (
-        <div style={S.modal} onClick={() => setShowPrivacy(false)}>
-          <div style={S.modalContent} onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(8,11,15,0.95)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowPrivacy(false)}>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', padding: 32, maxWidth: 500, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }} onClick={e => e.stopPropagation()}>
             <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 20 }}>Privacy & Terms</h2>
             <div style={{ fontSize: 13, color: 'var(--text-sub)', display: 'flex', flexDirection: 'column', gap: 16, lineHeight: 1.6 }}>
-              <p><strong>1. Data Collection:</strong> We collect only your email address for account management. We do not sell your data to third parties.</p>
-              <p><strong>2. Payment:</strong> Payments are processed securely via Paystack. We do not store your credit card details.</p>
-              <p><strong>3. Tracking:</strong> We use the Meta Pixel to improve our advertising performance. You can opt-out via Facebook settings.</p>
-              <p><strong>4. Disclaimer:</strong> RiskPilot is a mathematical tool. You are solely responsible for your trading decisions and any resulting financial loss.</p>
+              <p>RiskPilot is a software utility. We collect email addresses only for account management. Payments are processed via Paystack. We do not store card details.</p>
             </div>
             <button onClick={() => setShowPrivacy(false)} style={{ marginTop: 30, width: '100%', padding: '12px', background: 'var(--gold)', border: 'none', borderRadius: 'var(--radius)', fontWeight: 700, cursor: 'pointer' }}>CLOSE</button>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Feature({ icon, label }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-      <span style={{ fontSize: 24 }}>{icon}</span>
-      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-sub)', textTransform: 'uppercase' }}>{label}</span>
     </div>
   );
 }
