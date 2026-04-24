@@ -10,8 +10,11 @@ if (!SUPABASE_URL || !SUPABASE_ANON) {
   );
 }
 
-// Fallback to empty strings to prevent createClient from crashing the whole module import
-export const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON || '', {
+// Fallback to placeholder strings to prevent createClient from crashing the whole module import
+const SAFE_URL  = SUPABASE_URL || 'https://placeholder-fix.supabase.co';
+const SAFE_ANON = SUPABASE_ANON || 'placeholder-key';
+
+export const supabase = createClient(SAFE_URL, SAFE_ANON, {
   auth: {
     persistSession:     true,
     autoRefreshToken:   true,
