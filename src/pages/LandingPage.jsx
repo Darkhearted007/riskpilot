@@ -33,55 +33,33 @@ export default function LandingPage({ onGetStarted }) {
   const [activeFaq, setActiveFaq] = useState(null);
 
   useEffect(() => {
-    Pixel.track('PageView');
-
-    // Fetch Real Social Proof - Temporarily Disabled for Stability
-    /*
-    const fetchProof = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('full_name, location_city, updated_at')
-        .eq('is_gold', true)
-        .order('updated_at', { ascending: false })
-        .limit(10);
-      
-      if (data && data.length > 0) {
-        const formatted = data.map(p => ({
-          name: p.full_name || 'Anonymous',
-          city: p.location_city || 'Earth',
-          time: 'Recently'
-        }));
-        setPurchases(formatted);
-      }
-    };
-    fetchProof();
-    */
-    
     // Social Proof Cycle
     const proofInterval = setInterval(() => {
       setShowProof(false);
       setTimeout(() => {
-        setProofIndex((prev) => (prev + 1) % purchases.length);
+        setProofIndex((prev) => (prev + 1) % RECENT_PURCHASES.length);
         setShowProof(true);
       }, 500);
     }, 8000);
 
-    // Countdown Timer
+    // Countdown Timer — uses functional updater to avoid stale closure
     const timerInterval = setInterval(() => {
-      const parts = timeLeft.split(':').map(Number);
-      let [h, m, s] = parts;
-      s--;
-      if (s < 0) { s = 59; m--; }
-      if (m < 0) { m = 59; h--; }
-      if (h < 0) { h = 2; m = 47; s = 15; }
-      setTimeLeft(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`);
+      setTimeLeft((prev) => {
+        const parts = prev.split(':').map(Number);
+        let [h, m, s] = parts;
+        s--;
+        if (s < 0) { s = 59; m--; }
+        if (m < 0) { m = 59; h--; }
+        if (h < 0) { h = 2; m = 47; s = 15; }
+        return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+      });
     }, 1000);
 
     return () => {
       clearInterval(proofInterval);
       clearInterval(timerInterval);
     };
-  }, [timeLeft]);
+  }, []); // ← Empty array: runs ONCE on mount, never again
 
   const handleJoin = () => {
     Pixel.trackInitiateCheckout('Gold Lifetime');
