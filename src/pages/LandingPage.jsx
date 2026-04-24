@@ -35,7 +35,8 @@ export default function LandingPage({ onGetStarted }) {
   useEffect(() => {
     Pixel.track('PageView');
 
-    // Fetch Real Social Proof
+    // Fetch Real Social Proof - Temporarily Disabled for Stability
+    /*
     const fetchProof = async () => {
       const { data } = await supabase
         .from('profiles')
@@ -54,6 +55,7 @@ export default function LandingPage({ onGetStarted }) {
       }
     };
     fetchProof();
+    */
     
     // Social Proof Cycle
     const proofInterval = setInterval(() => {
