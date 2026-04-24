@@ -8,6 +8,7 @@ import Affiliate from './pages/Affiliate';
 import AuthScreen from './components/AuthScreen';
 import AppHeader from './components/AppHeader';
 import TabBar from './components/TabBar';
+import PaystackButton from './components/PaystackButton';
 import { Pixel } from './lib/marketing';
 import './styles/globals.css';
 
@@ -17,6 +18,8 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState('calc');
   const [view, setView] = useState('landing'); // 'landing', 'auth', 'app', 'affiliate'
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   const handleTabChange = (t) => {
     setTab(t);
     window.scrollTo(0, 0);
@@ -94,13 +97,33 @@ export default function App() {
         isGold={profile?.is_gold} 
         onSignOut={() => { setUser(null); setView('landing'); }} 
         onUpgrade={() => fetchProfile(user.id)}
+        onOpenUpgrade={() => setShowUpgradeModal(true)}
       />
       <main style={{ paddingBottom: 80 }}>
-        {tab === 'calc' && <Calculator user={user} isGold={profile?.is_gold} />}
+        {tab === 'calc' && <Calculator user={user} isGold={profile?.is_gold} onUpgrade={() => setShowUpgradeModal(true)} />}
         {tab === 'journal' && <Journal user={user} isGold={profile?.is_gold} />}
         {tab === 'dashboard' && <Dashboard user={user} isGold={profile?.is_gold} />}
       </main>
       <TabBar active={tab} setActive={handleTabChange} />
+
+      {/* Global Upgrade Modal */}
+      {showUpgradeModal && !profile?.is_gold && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowUpgradeModal(false)}>
+          <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-gold)', borderRadius: 'var(--radius-xl)', padding: 32, width: '100%', maxWidth: 400, textAlign: 'center', position: 'relative' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowUpgradeModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer' }}>×</button>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🚀</div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Scale to $30k/Week</h2>
+            <p style={{ fontSize: 14, color: 'var(--text-sub)', lineHeight: 1.5, marginBottom: 24 }}>Unlock advanced performance tracking, historical journaling, and the robotic equity curve log.</p>
+            
+            <PaystackButton user={user} onSuccess={(ref) => {
+              fetchProfile(user.id);
+              setShowUpgradeModal(false);
+            }} />
+            
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 16, fontFamily: 'var(--font-data)' }}>ONE-TIME LIFETIME ACCESS · LIMITED OFFER</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -288,6 +288,12 @@ export default function Calculator({ user, isGold }) {
             <p style={{ fontSize:11, fontWeight:700, color:'var(--gold)', fontFamily:'var(--font-data)' }}>SCALE YOUR SUCCESS</p>
             <p style={{ fontSize:10, color:'var(--text-sub)' }}>Upgrade to Gold to unlock precision equity tracking and full trade history.</p>
           </div>
+          <button 
+            onClick={onUpgrade}
+            style={{ background:'var(--gold)', border:'none', borderRadius:'var(--radius-sm)', padding:'6px 12px', color:'#000', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'var(--font-data)' }}
+          >
+            UPGRADE
+          </button>
         </div>
       )}
 

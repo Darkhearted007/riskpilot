@@ -7,20 +7,20 @@ import { supabase } from '../lib/supabaseClient';
  */
 export default function PaystackButton({ user, onSuccess }) {
   const handlePayment = () => {
-    // 1. Fire InitiateCheckout event for Meta Ads optimization
     Pixel.trackInitiateCheckout('Gold Edition');
+    if (!window.PaystackPop) {
+      alert('Payment system is still loading. Please try again in a moment.');
+      return;
+    }
 
     const handler = window.PaystackPop.setup({
       key: 'pk_test_f84800b3cfc6b0a2fd8fb5e24bfc09c9aee3246d',
       email: user.email,
-      amount: 4700, // $47.00 in kobo/cents (Note: Paystack uses the currency's smallest unit)
+      amount: 4700, // $47.00
       currency: 'USD',
       ref: `RP-${Math.floor(Math.random() * 1000000000 + 1)}`,
       callback: async (response) => {
-        // 2. Track successful purchase in Meta Pixel
         Pixel.trackPurchase(47, 'USD');
-
-        // 3. Update User Profile in Supabase
         const { error } = await supabase
           .from('profiles')
           .update({ 
@@ -41,7 +41,7 @@ export default function PaystackButton({ user, onSuccess }) {
       }
     });
 
-    handler.openIframe();
+    handler.open();
   };
 
   return (
