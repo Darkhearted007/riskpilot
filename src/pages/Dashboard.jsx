@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { calculateDisciplineScore } from '../lib/riskEngine';
+import { generateShareText, copyToClipboard } from '../lib/shareReport';
 import DisciplineScore from '../components/DisciplineScore';
 import TradeHistory from '../components/TradeHistory';
 
@@ -77,6 +78,8 @@ export default function Dashboard({ user, isGold }) {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState('');
   const [lastFetch, setLastFetch] = useState(null);
+  const [sharing,   setSharing]   = useState(false);
+  const [shared,    setShared]    = useState(false);
 
   const fetchTrades = useCallback(async (isRefresh = false) => {
     if (isRefresh) setLoading(true);
@@ -128,6 +131,22 @@ export default function Dashboard({ user, isGold }) {
     return acc;
   }, {});
 
+  const handleShare = async () => {
+    setSharing(true);
+    const text = generateShareText({
+      winRate,
+      disciplineGrade: disciplineData.grade,
+      netPnl,
+      tradesCount: trades.length
+    });
+    const success = await copyToClipboard(text);
+    if (success) {
+      setShared(true);
+      setTimeout(() => setShared(false), 3000);
+    }
+    setSharing(false);
+  };
+
   return (
     <div style={{ padding:'20px 16px 110px', display:'flex', flexDirection:'column', gap:14, maxWidth:520, margin:'0 auto' }} className="fade-up">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
@@ -135,9 +154,22 @@ export default function Dashboard({ user, isGold }) {
           <p style={{ fontFamily:'var(--font-data)', fontSize:10, color:'var(--gold)', letterSpacing:'0.16em', marginBottom:4 }}>PERFORMANCE</p>
           <h1 style={{ fontFamily:'var(--font-display)', fontSize:26, fontWeight:700, lineHeight:1.1 }}>Dashboard</h1>
         </div>
-        <button onClick={() => fetchTrades(true)} disabled={loading} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', color:'var(--text-sub)', width:36, height:36, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <span style={loading?{display:'inline-block',animation:'spin 0.8s linear infinite'}:{}}>↻</span>
-        </button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button 
+            onClick={handleShare} 
+            disabled={sharing || trades.length === 0} 
+            style={{ 
+              background:'var(--gold-dim)', border:'1px solid var(--border-gold)', borderRadius:'var(--radius)', 
+              color:'var(--gold)', padding:'0 16px', fontSize:12, fontWeight:700, cursor:'pointer',
+              display:'flex', alignItems:'center', gap:8
+            }}
+          >
+            {shared ? '✓ COPIED' : '📤 SHARE'}
+          </button>
+          <button onClick={() => fetchTrades(true)} disabled={loading} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', color:'var(--text-sub)', width:36, height:36, fontSize:18, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <span style={loading?{display:'inline-block',animation:'spin 0.8s linear infinite'}:{}}>↻</span>
+          </button>
+        </div>
       </div>
 
       {error && (

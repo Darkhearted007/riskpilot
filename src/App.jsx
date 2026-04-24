@@ -4,6 +4,7 @@ import Calculator from './pages/Calculator';
 import Journal from './pages/Journal';
 import Dashboard from './pages/Dashboard';
 import LandingPage from './pages/LandingPage';
+import Affiliate from './pages/Affiliate';
 import AuthScreen from './components/AuthScreen';
 import AppHeader from './components/AppHeader';
 import TabBar from './components/TabBar';
@@ -15,7 +16,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState('calc');
-  const [view, setView] = useState('landing'); // 'landing', 'auth', 'app'
+  const [view, setView] = useState('landing'); // 'landing', 'auth', 'app', 'affiliate'
 
   // Initialize Pixel (Official ID)
   useEffect(() => {
@@ -69,7 +70,8 @@ export default function App() {
   // PUBLIC VIEWS
   if (!user) {
     if (view === 'auth') return <AuthScreen onAuth={(u) => { setUser(u); setView('app'); fetchProfile(u.id); }} />;
-    return <LandingPage onGetStarted={() => setView('auth')} />;
+    if (view === 'affiliate') return <Affiliate onBack={() => setView('landing')} />;
+    return <LandingPage onGetStarted={(v) => setView(v === 'affiliate' ? 'affiliate' : 'auth')} />;
   }
 
   // PRIVATE APP

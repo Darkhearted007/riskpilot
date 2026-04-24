@@ -55,6 +55,14 @@ export const Pixel = {
 
   trackInitiateCheckout(planName) {
     this.track('InitiateCheckout', { content_name: planName });
+  },
+
+  trackViewContent(name, category) {
+    this.track('ViewContent', { content_name: name, content_category: category });
+  },
+
+  trackFAQView(question) {
+    this.track('FAQView', { question });
   }
 };
 

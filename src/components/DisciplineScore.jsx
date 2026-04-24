@@ -45,9 +45,16 @@ export default function DisciplineScore({ score, grade, label, color, tradesUsed
       <p style={{ fontFamily:'var(--font-body)', fontSize:14, fontWeight:600, marginTop:4, color }}>{label}</p>
       {tradesUsed > 0 && (
         <div style={{ display:'flex', gap:24, marginTop:8, padding:'10px 20px', background:'var(--surface-high)', borderRadius:'var(--radius)', border:'1px solid var(--border)' }}>
-          {[['safe', breakdown?.safe||0, 'Safe', 'var(--green)'], ['agg', breakdown?.aggressive||0, 'Mod', 'var(--amber)'], ['dan', breakdown?.danger||0, 'Danger', 'var(--red)']].map(([k,n,l,c]) => (
+          {[
+            ['risk', (breakdown?.risk || 0), 'Risk', 'var(--gold)'], 
+            ['psych', (breakdown?.psychology || 0), 'Psych', 'var(--blue)'], 
+            ['strat', (breakdown?.strategy || 0), 'Strat', 'var(--amber)']
+          ].map(([k,n,l,c]) => (
             <div key={k} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
-              <span className="font-data" style={{ fontSize:14, fontWeight:700, color:c }}>{n}</span>
+              <div style={{ display:'flex', alignItems:'baseline', gap:2 }}>
+                <span className="font-data" style={{ fontSize:14, fontWeight:700, color:c }}>{n}</span>
+                <span style={{ fontSize:8, color:'var(--text-faint)' }}>/{k==='risk'?40:30}</span>
+              </div>
               <span style={{ fontSize:10, color:'var(--text-muted)', letterSpacing:'0.08em' }}>{l.toUpperCase()}</span>
             </div>
           ))}

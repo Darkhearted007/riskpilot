@@ -34,27 +34,67 @@ export function calculateGoldLotSize(balance, riskPercent, stopLossPips) {
 
 export function calculateDisciplineScore(trades) {
   if (!trades || trades.length === 0) {
-    return { score: 0, grade: '—', label: 'No data', color: '#3D5168', tradesUsed: 0, breakdown: { safe: 0, aggressive: 0, danger: 0 } };
+    return { score: 0, grade: '—', label: 'No data', color: '#3D5168', tradesUsed: 0, breakdown: { risk: 0, psychology: 0, strategy: 0 } };
   }
+
   const recent = trades.slice(0, 20);
-  const breakdown = { safe: 0, aggressive: 0, danger: 0 };
-  let rawScore = 50;
+  let riskScore = 40;       // Max 40
+  let psychScore = 30;      // Max 30
+  let strategyScore = 30;   // Max 30
+
+  let lastRisk = null;
+  let riskFlippingCount = 0;
+
   for (const trade of recent) {
-    const level = trade.risk_level;
-    breakdown[level] = (breakdown[level] || 0) + 1;
-    if (level === 'safe')             rawScore += 10;
-    else if (level === 'aggressive')  rawScore += 5;
-    else if (level === 'danger')      rawScore -= 10;
+    // 1. Risk Component (Max 40)
+    if (trade.risk_level === 'safe') riskScore += 0; // Baseline is safe
+    else if (trade.risk_level === 'aggressive') riskScore -= 2;
+    else if (trade.risk_level === 'danger') riskScore -= 8;
+
+    // Detect Risk Flipping (Inconsistency)
+    if (lastRisk && lastRisk !== trade.risk_level) riskFlippingCount++;
+    lastRisk = trade.risk_level;
+
+    // 2. Psychology Component (Max 30)
+    const emotion = (trade.emotion || '').toLowerCase();
+    if (['revenge', 'greedy', 'angry', 'frustrated'].includes(emotion)) psychScore -= 5;
+    else if (['fearful', 'anxious'].includes(emotion)) psychScore -= 2;
+    else if (['calm', 'confident', 'disciplined'].includes(emotion)) psychScore += 0.5;
+
+    // 3. Strategy Component (Max 30)
+    if (trade.setup_type) strategyScore += 0.5;
+    else strategyScore -= 1;
+
+    if (trade.notes && trade.notes.length > 10) strategyScore += 0.5;
+    else strategyScore -= 1;
+    
+    // Penalize missing stop loss (if it was somehow bypassed in the app)
+    if (!trade.stop_loss_price) strategyScore -= 5;
   }
-  const score = Math.max(0, Math.min(100, rawScore));
+
+  // Final Penalties
+  if (riskFlippingCount > 3) riskScore -= 10; // High volatility penalty
+
+  const totalScore = Math.max(0, Math.min(100, Math.round(riskScore + psychScore + strategyScore)));
+  
   let grade, label, color;
-  if (score >= 90)      { grade='A+'; label='Elite';        color='#00E676'; }
-  else if (score >= 75) { grade='A';  label='Disciplined';  color='#69F0AE'; }
-  else if (score >= 60) { grade='B';  label='Consistent';   color='#FFB300'; }
-  else if (score >= 45) { grade='C';  label='Moderate';     color='#FF9100'; }
-  else if (score >= 30) { grade='D';  label='Risky';        color='#FF6D00'; }
-  else                  { grade='F';  label='Reckless';      color='#FF3D57'; }
-  return { score, grade, label, color, tradesUsed: recent.length, breakdown };
+  if (totalScore >= 90)      { grade='A+'; label='Elite';        color='#00E676'; }
+  else if (totalScore >= 75) { grade='A';  label='Disciplined';  color='#69F0AE'; }
+  else if (totalScore >= 60) { grade='B';  label='Consistent';   color='#FFB300'; }
+  else if (totalScore >= 45) { grade='C';  label='Moderate';     color='#FF9100'; }
+  else if (totalScore >= 30) { grade='D';  label='Risky';        color='#FF6D00'; }
+  else                       { grade='F';  label='Reckless';      color='#FF3D57'; }
+
+  return { 
+    score: totalScore, 
+    grade, label, color, 
+    tradesUsed: recent.length, 
+    breakdown: { 
+      risk: Math.max(0, Math.round(riskScore)), 
+      psychology: Math.max(0, Math.round(psychScore)), 
+      strategy: Math.max(0, Math.round(strategyScore)) 
+    } 
+  };
 }
 
 export function getTradeWarnings(riskPercent, stopLossPips) {
