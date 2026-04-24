@@ -16,7 +16,7 @@ function TradeCard({ trade, onRefresh }) {
     const xp = parseFloat(exitPrice);
     const isBuy = trade.direction === 'BUY';
     const pips = isBuy ? (xp - ep) / 0.1 : (ep - xp) / 0.1;
-    const pnl = pips * (trade.lot_size * 1); // Standardized Gold pip value
+    const pnl = pips * (trade.lot_size * 10); // Matches XAUUSD_PIP_VALUE = 10
     const win = pnl > 0;
 
     const { error } = await supabase

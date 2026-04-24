@@ -17,6 +17,10 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState('calc');
   const [view, setView] = useState('landing'); // 'landing', 'auth', 'app', 'affiliate'
+  const handleTabChange = (t) => {
+    setTab(t);
+    window.scrollTo(0, 0);
+  };
 
   // Initialize Pixel (Official ID)
   useEffect(() => {
@@ -96,7 +100,7 @@ export default function App() {
         {tab === 'journal' && <Journal user={user} isGold={profile?.is_gold} />}
         {tab === 'dashboard' && <Dashboard user={user} isGold={profile?.is_gold} />}
       </main>
-      <TabBar active={tab} setActive={setTab} />
+      <TabBar active={tab} setActive={handleTabChange} />
     </div>
   );
 }
