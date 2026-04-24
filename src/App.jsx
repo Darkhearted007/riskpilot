@@ -16,6 +16,10 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  
+  // Diagnostic Check
+  const isConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+
   const [tab, setTab] = useState('calc');
   const [view, setView] = useState('landing'); // 'landing', 'auth', 'app', 'affiliate'
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -72,6 +76,23 @@ export default function App() {
     
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
+
+  if (!isConfigured) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32, textAlign: 'center', background: 'var(--bg)' }}>
+        <div style={{ fontSize: 48 }}>⚙️</div>
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, marginBottom: 8, color: 'var(--gold)' }}>Configuration Required</h1>
+          <p style={{ fontSize: 14, color: 'var(--text-sub)', maxWidth: 300, margin: '0 auto', lineHeight: 1.6 }}>
+            RiskPilot is missing its database connection. Please add <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong> to your Vercel Environment Variables.
+          </p>
+        </div>
+        <button onClick={() => window.location.reload()} style={{ background: 'var(--surface-high)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 24px', color: 'var(--gold)', fontWeight: 600, cursor: 'pointer' }}>
+          RETRY SYNC
+        </button>
+      </div>
+    );
+  }
 
   if (authLoading) {
     return (
