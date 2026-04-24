@@ -354,6 +354,7 @@ export default function Calculator({ user, isGold }) {
           <button onClick={handleSave} disabled={saving || saved} style={{ marginTop:12, width:'100%', padding:14, borderRadius:'var(--radius)', background:saved?'var(--green-dim)':'var(--gold)', color:saved?'var(--green)':'#080600', fontSize:13, fontWeight:700, cursor:saving||saved?'not-allowed':'pointer', fontFamily:'var(--font-data)', letterSpacing:'0.08em', transition:'all 0.3s' }}>
             {saving ? 'SAVING...' : saved ? '✓ LOGGED' : 'LOG THIS TRADE →'}
           </button>
+          {saveError && <p style={{ color:'var(--red)', fontSize:11, textAlign:'center', marginTop:10, fontWeight:600 }}>{saveError}</p>}
         </div>
       ) : (
         <div style={S.emptyState}>

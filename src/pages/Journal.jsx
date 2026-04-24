@@ -61,7 +61,7 @@ function TradeCard({ trade, onRefresh }) {
         {isClosed && (
           <div style={{ textAlign:'right' }}>
             <p style={{ fontSize:10, color:'var(--text-muted)', marginBottom:2 }}>OUTCOME</p>
-            <p className="font-data" style={{ fontSize:18, fontWeight:700, color }}>{trade.pnl_amount > 0 ? '+' : ''}${trade.pnl_amount.toFixed(2)}</p>
+            <p className="font-data" style={{ fontSize:18, fontWeight:700, color }}>{trade.pnl_amount > 0 ? '+' : ''}${Number(trade.pnl_amount || 0).toFixed(2)}</p>
           </div>
         )}
       </div>
@@ -112,17 +112,24 @@ function TradeCard({ trade, onRefresh }) {
 export default function Journal({ user, isGold }) {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const fetchTrades = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+    setError('');
+    const { data, error: err } = await supabase
       .from('trades')
       .select('*')
       .eq('user_id', user.id)
-      .order('status', { ascending: false }) // 'open' before 'closed'
+      .order('status', { ascending: false })
       .order('created_at', { ascending: false });
     
-    if (data) setTrades(data);
+    if (err) {
+      console.error('Journal fetch error:', err);
+      setError('Could not sync journal. Check your connection.');
+    } else {
+      setTrades(data || []);
+    }
     setLoading(false);
   }, [user.id]);
 
@@ -135,11 +142,21 @@ export default function Journal({ user, isGold }) {
 
   return (
     <div style={{ padding:'20px 16px 110px', display:'flex', flexDirection:'column', gap:16, maxWidth:520, margin:'0 auto' }} className="fade-up">
-      <div>
-        <p style={{ fontFamily:'var(--font-data)', fontSize:10, color:'var(--gold)', letterSpacing:'0.16em', marginBottom:4 }}>PORTFOLIO</p>
-        <h1 style={{ fontFamily:'var(--font-display)', fontSize:26, fontWeight:700, lineHeight:1.1 }}>Trade Journal</h1>
-        <p style={{ fontSize:13, color:'var(--text-muted)', marginTop:4 }}>Log your psychology and conclude active positions.</p>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>
+          <p style={{ fontFamily:'var(--font-data)', fontSize:10, color:'var(--gold)', letterSpacing:'0.16em', marginBottom:4 }}>PORTFOLIO</p>
+          <h1 style={{ fontFamily:'var(--font-display)', fontSize:26, fontWeight:700, lineHeight:1.1 }}>Trade Journal</h1>
+        </div>
+        <button onClick={fetchTrades} disabled={loading} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)', color:'var(--text-sub)', width:36, height:36, cursor:'pointer' }}>
+          <span style={loading?{display:'inline-block',animation:'spin 0.8s linear infinite'}:{}}>↻</span>
+        </button>
       </div>
+
+      {error && (
+        <div style={{ background:'var(--red-dim)', border:'1px solid rgba(255,61,87,0.2)', borderRadius:'var(--radius)', padding:'12px 16px', color:'var(--red)', fontSize:12, textAlign:'center' }}>
+          {error}
+        </div>
+      )}
 
       {loading && trades.length === 0 ? (
         <div style={{ padding:'40px 20px', textAlign:'center' }}>
