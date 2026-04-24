@@ -21,6 +21,14 @@ export default function App() {
   // Initialize Pixel (Official ID)
   useEffect(() => {
     Pixel.init('1313953607262542');
+    
+    // Capture Referral
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      localStorage.setItem('rp_referrer', ref);
+      console.log('[RiskPilot] Referrer captured:', ref);
+    }
   }, []);
 
   const fetchProfile = useCallback(async (userId) => {

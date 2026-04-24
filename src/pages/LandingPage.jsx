@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import { Pixel } from '../lib/marketing';
 
 const RECENT_PURCHASES = [
@@ -25,6 +26,7 @@ const FAQS = [
 
 export default function LandingPage({ onGetStarted }) {
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [purchases, setPurchases] = useState(RECENT_PURCHASES);
   const [proofIndex, setProofIndex] = useState(0);
   const [showProof, setShowProof] = useState(true);
   const [timeLeft, setTimeLeft] = useState('02:47:15');
@@ -32,12 +34,32 @@ export default function LandingPage({ onGetStarted }) {
 
   useEffect(() => {
     Pixel.track('PageView');
+
+    // Fetch Real Social Proof
+    const fetchProof = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, location_city, updated_at')
+        .eq('is_gold', true)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+      
+      if (data && data.length > 0) {
+        const formatted = data.map(p => ({
+          name: p.full_name || 'Anonymous',
+          city: p.location_city || 'Earth',
+          time: 'Recently'
+        }));
+        setPurchases(formatted);
+      }
+    };
+    fetchProof();
     
     // Social Proof Cycle
     const proofInterval = setInterval(() => {
       setShowProof(false);
       setTimeout(() => {
-        setProofIndex((prev) => (prev + 1) % RECENT_PURCHASES.length);
+        setProofIndex((prev) => (prev + 1) % purchases.length);
         setShowProof(true);
       }, 500);
     }, 8000);
@@ -64,7 +86,7 @@ export default function LandingPage({ onGetStarted }) {
     onGetStarted();
   };
 
-  const currentProof = RECENT_PURCHASES[proofIndex];
+  const currentProof = purchases[proofIndex];
 
   return (
     <div style={S.container}>

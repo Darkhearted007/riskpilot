@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import { Pixel } from '../lib/marketing';
 
 const S = {
@@ -67,13 +68,31 @@ const S = {
 export default function Affiliate({ onBack }) {
   const [email, setEmail] = useState('');
   const [applied, setApplied] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [isAffiliate, setIsAffiliate] = useState(false);
 
-  const handleApply = (e) => {
+  useEffect(() => {
+    const checkStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        const { data } = await supabase.from('profiles').select('is_affiliate').eq('id', user.id).single();
+        if (data?.is_affiliate) setIsAffiliate(true);
+      }
+    };
+    checkStatus();
+  }, []);
+
+  const handleApply = async (e) => {
     e.preventDefault();
     if (!email) return;
+    
+    // In a real app, you'd update the profile or send to a CRM
     setApplied(true);
     Pixel.track('CompleteRegistration', { content_name: 'Affiliate Application' });
   };
+
+  const referralLink = `https://riskpilot-gold.vercel.app?ref=${userId || 'YOUR_ID'}`;
 
   return (
     <div style={S.container}>
@@ -99,7 +118,20 @@ export default function Affiliate({ onBack }) {
             <span style={{ color:'var(--text)', fontWeight:700 }}>Monthly</span>
           </div>
 
-          {!applied ? (
+          {isAffiliate ? (
+            <div style={{ marginTop: 24 }}>
+              <p style={{ fontSize:12, color:'var(--text-sub)', marginBottom:8 }}>Your Unique Referral Link:</p>
+              <div style={{ display:'flex', gap:8 }}>
+                <input 
+                  readOnly
+                  value={referralLink}
+                  style={{ flex:1, padding:14, background:'var(--bg-3)', border:'1px solid var(--gold)', borderRadius:'var(--radius)', color:'var(--gold)', fontSize:12, fontWeight:600 }}
+                />
+                <button onClick={() => { navigator.clipboard.writeText(referralLink); alert('Link Copied!'); }} style={{ padding:'0 12px', background:'var(--gold)', border:'none', borderRadius:'var(--radius)', fontWeight:700, cursor:'pointer' }}>COPY</button>
+              </div>
+              <p style={{ fontSize:10, color:'var(--text-muted)', marginTop:12 }}>Share this link to earn 30% on every Gold upgrade.</p>
+            </div>
+          ) : !applied ? (
             <form onSubmit={handleApply} style={{ marginTop: 24 }}>
               <p style={{ fontSize:12, color:'var(--text-sub)', marginBottom:8 }}>Enter your email to apply for the partner portal:</p>
               <input 
