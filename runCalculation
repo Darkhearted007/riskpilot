@@ -1,0 +1,11 @@
+const runCalculation = () => {
+  // 🔥 replace these with your real inputs
+  const stake = 1000
+  const odds = 2.5
+
+  const profit = stake * odds - stake
+
+  logCalculation(stake, odds, profit)
+
+  return { stake, odds, profit }
+}
