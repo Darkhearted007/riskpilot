@@ -1,4 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  componentDidCatch(error) { this.setState({ error }); }
+  render() {
+    if (this.state.error) return (
+      <div style={{ padding: 24, color: '#ef4444', fontFamily: 'monospace', fontSize: 12, background: '#0a0e13', minHeight: '50vh', whiteSpace: 'pre-wrap' }}>
+        {this.state.error.toString()}\n\n{this.state.error.stack}
+      </div>
+    );
+    return this.props.children;
+  }
+}
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabaseClient';
 import Calculator from './pages/Calculator';
 import Journal from './pages/Journal';
@@ -120,9 +132,21 @@ export default function App() {
         onOpenUpgrade={() => setShowUpgradeModal(true)}
       />
       <main style={{ paddingBottom: 80 }}>
-        {tab === 'calc' && <Calculator user={user} isGold={profile?.is_gold} onUpgrade={() => setShowUpgradeModal(true)} />}
-        {tab === 'journal' && <Journal user={user} isGold={profile?.is_gold} />}
-        {tab === 'dashboard' && <Dashboard user={user} isGold={profile?.is_gold} />}
+        {tab === 'calc' && (
+          <ErrorBoundary>
+            <Calculator user={user} isGold={profile?.is_gold} onUpgrade={() => setShowUpgradeModal(true)} />
+          </ErrorBoundary>
+        )}
+        {tab === 'journal' && (
+          <ErrorBoundary>
+            <Journal user={user} isGold={profile?.is_gold} />
+          </ErrorBoundary>
+        )}
+        {tab === 'dashboard' && (
+          <ErrorBoundary>
+            <Dashboard user={user} isGold={profile?.is_gold} />
+          </ErrorBoundary>
+        )}
       </main>
       <TabBar active={tab} setActive={handleTabChange} />
 
