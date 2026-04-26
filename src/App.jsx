@@ -156,8 +156,8 @@ export default function App() {
           <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border-gold)', borderRadius: 'var(--radius-xl)', padding: 32, width: '100%', maxWidth: 400, textAlign: 'center', position: 'relative' }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowUpgradeModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer' }}>×</button>
             <div style={{ fontSize: 40, marginBottom: 16 }}>🚀</div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Scale to $30k/Week</h2>
-            <p style={{ fontSize: 14, color: 'var(--text-sub)', lineHeight: 1.5, marginBottom: 24 }}>Unlock advanced performance tracking, historical journaling, and the robotic equity curve log.</p>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:24, fontWeight:800, marginBottom:8 }}>Trade Smarter. Grow Consistently.</h2>
+            <p style={{ fontSize:14, color:'var(--text-sub)', lineHeight:1.5, marginBottom:24 }}>Unlock full trade history, equity curve tracking, session analytics, and advanced discipline scoring.</p>
             
             <PaystackButton user={user} onSuccess={(ref) => {
               fetchProfile(user.id);
