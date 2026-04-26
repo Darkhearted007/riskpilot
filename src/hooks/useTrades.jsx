@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-
 export function useTrades() {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
