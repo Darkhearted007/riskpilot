@@ -185,7 +185,7 @@ function RRRBar({ rrr, slPips, tpPips }) {
   );
 }
 
-export default function Calculator({ user, isGold }) {
+export default function Calculator({ user, isGold, onUpgrade }) {
   const [balance,   setBalance]   = useState('');
   const [riskPct,   setRiskPct]   = useState('1');
   const [entry,     setEntry]     = useState('');
