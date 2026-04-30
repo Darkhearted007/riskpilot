@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { signIn, signUp } from "../lib/auth"
+import { signIn, signUp, signInWithGoogle } from "../lib/auth"
 
 export default function Login() {
   const [email, setEmail] = useState("")
@@ -10,10 +10,10 @@ export default function Login() {
     if (error) alert(error.message)
   }
 
-  const handleSignup = async () => {
-    const { error } = await signUp(email, password)
-    if (error) alert(error.message)
-  }
+  const handleGoogle = async () => {
+  const { error } = await signInWithGoogle()
+  if (error) alert(error.message)
+}
 
   return (
     <div style={{ padding: 20 }}>
