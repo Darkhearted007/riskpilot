@@ -10,6 +10,8 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+import { Routes, Route } from 'react-router-dom';
+import Contact from './pages/Contact';
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabaseClient';
 import Calculator from './pages/Calculator';
@@ -28,22 +30,24 @@ export default function App() {
   // 1. Immediate Diagnostic Check
   const isConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  if (!isConfigured) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32, textAlign: 'center', background: '#080B0F', color: '#fff' }}>
-        <div style={{ fontSize: 48 }}>⚙️</div>
-        <div>
-          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 24, marginBottom: 8, color: '#D4AF37' }}>Configuration Required</h1>
-          <p style={{ fontSize: 14, color: '#8A9BB0', maxWidth: 300, margin: '0 auto', lineHeight: 1.6 }}>
-            RiskPilot is missing its database connection. Please add <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong> to your Vercel Environment Variables.
-          </p>
-        </div>
-        <button onClick={() => window.location.reload()} style={{ background: '#162030', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 24px', color: '#D4AF37', fontWeight: 600, cursor: 'pointer' }}>
-          RETRY SYNC
-        </button>
-      </div>
-    );
-  }
+  if (!user) {
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          view === 'auth'
+            ? <AuthScreen onAuth={(u) => { setUser(u); setView('app'); fetchProfile(u.id); }} />
+            : view === 'affiliate'
+              ? <Affiliate onBack={() => setView('landing')} />
+              : <LandingPage onGetStarted={(v) => setView(v === 'affiliate' ? 'affiliate' : 'auth')} />
+        }
+      />
+
+      <Route path="/contact" element={<Contact />} />
+    </Routes>
+  );
+}
 
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
