@@ -20,7 +20,7 @@ export default function Contact() {
       </p>
 
       <a
-        href="mailto:support@riskpilot.app"
+        href="mailto:olugbenga1000@gmail.com"
         style={{
           padding: "12px 18px",
           background: "#162030",
@@ -30,7 +30,7 @@ export default function Contact() {
           border: "1px solid rgba(255,255,255,0.1)"
         }}
       >
-        support@riskpilot.app
+        olugbenga1000@gmail.com
       </a>
     </div>
   );
