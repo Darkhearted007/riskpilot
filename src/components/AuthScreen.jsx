@@ -97,6 +97,14 @@ export default function AuthScreen({ onAuth }) {
         </div>
         {error && <div style={{ padding: '10px 14px', background: 'var(--red-dim)', border: '1px solid rgba(255,61,87,0.3)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--red)' }}>{error}</div>}
         {success && <div style={{ padding: '10px 14px', background: 'var(--green-dim)', border: '1px solid rgba(0,230,118,0.3)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--green)' }}>{success}</div>}
+<button onClick={async () => { const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) setError(error.message); }} style={{ width: '100%', padding: 13, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-3)', color: 'var(--text)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-data)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            Continue with Google
+          </button>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ flex:1, height:1, background:'var(--border)' }} />
+            <span style={{ fontSize:11, color:'var(--text-muted)' }}>OR</span>
+            <div style={{ flex:1, height:1, background:'var(--border)' }} />
+          </div>
         <button onClick={handle} disabled={loading} style={{ width: '100%', padding: 14, borderRadius: 'var(--radius)', border: 'none', background: 'var(--gold)', color: '#080600', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-data)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           {loading ? <span className="spin" style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid rgba(0,0,0,0.2)', borderTop: '2px solid #0A0800', borderRadius: '50%' }} /> : mode === 'login' ? 'Sign In →' : mode === 'signup' ? 'Create Account →' : 'Send Reset Email →'}
         </button>
