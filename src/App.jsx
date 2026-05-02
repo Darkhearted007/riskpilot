@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
+import Support from './pages/Support';
+import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
 import { supabase } from './lib/supabaseClient';
 import Calculator from './pages/Calculator';
@@ -138,27 +140,47 @@ export default function App() {
   }
 
   /* ---------------- PUBLIC ROUTES ---------------- */
-  if (!user) {
-    if (view === 'auth') {
-      return <AuthScreen onAuth={(u) => {
-        setUser(u);
-        setView('app');
-        fetchProfile(u.id);
-      }} />;
-    }
+  // PUBLIC VIEWS
+if (!user) {
+  if (view === 'auth')
+    return <AuthScreen onAuth={(u) => { setUser(u); setView('app'); fetchProfile(u.id); }} />;
 
-    if (view === 'affiliate') {
-      return <Affiliate onBack={() => setView('landing')} />;
-    }
+  if (view === 'affiliate')
+    return <Affiliate onBack={() => setView('landing')} />;
 
-    return (
-      <LandingPage
-        onGetStarted={(v) =>
-          setView(v === 'affiliate' ? 'affiliate' : 'auth')
-        }
-      />
-    );
-  }
+  if (view === 'support')
+    return <Support />;
+
+  if (view === 'privacy')
+    return <Privacy />;
+
+  return (
+    <>
+      <LandingPage onGetStarted={(v) => setView(v === 'affiliate' ? 'affiliate' : 'auth')} />
+
+      <div style={{
+        textAlign: "center",
+        padding: 20,
+        fontSize: 12,
+        color: "var(--text-muted)"
+      }}>
+        <span
+          style={{ cursor: "pointer", marginRight: 16 }}
+          onClick={() => setView('privacy')}
+        >
+          Privacy Policy
+        </span>
+
+        <span
+          style={{ cursor: "pointer" }}
+          onClick={() => setView('support')}
+        >
+          Contact Support
+        </span>
+      </div>
+    </>
+  );
+}
 
   /* ---------------- PRIVATE APP ---------------- */
   return (
