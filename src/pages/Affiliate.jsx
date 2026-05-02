@@ -65,11 +65,15 @@ const S = {
   }
 };
 
+const OWNER_EMAIL = 'olugbenga1000@gmail.com';
+const BASE_URL = 'https://riskpilot-gold.vercel.app';
+
 export default function Affiliate({ onBack }) {
   const [email, setEmail] = useState('');
   const [applied, setApplied] = useState(false);
   const [userId, setUserId] = useState(null);
   const [isAffiliate, setIsAffiliate] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -83,16 +87,31 @@ export default function Affiliate({ onBack }) {
     checkStatus();
   }, []);
 
-  const handleApply = async (e) => {
+  const handleApply = (e) => {
     e.preventDefault();
     if (!email) return;
-    
-    // In a real app, you'd update the profile or send to a CRM
+
+    // Fire mailto to owner so every application lands in their inbox
+    const subject = encodeURIComponent('RiskPilot Affiliate Application');
+    const body = encodeURIComponent(
+      `New affiliate application received!\n\nApplicant Email: ${email}\n\nPlease review and approve their affiliate access in the Supabase dashboard by setting is_affiliate = true on their profile.\n\n---\nSent from RiskPilot Affiliate Page`
+    );
+    window.location.href = `mailto:${OWNER_EMAIL}?subject=${subject}&body=${body}`;
+
     setApplied(true);
     Pixel.track('CompleteRegistration', { content_name: 'Affiliate Application' });
   };
 
-  const referralLink = `https://riskpilot-gold.vercel.app?ref=${userId || 'YOUR_ID'}`;
+  const handleCopy = (link) => {
+    navigator.clipboard.writeText(link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
+
+  // Use userId slug if available, fall back to owner's vanity slug
+  const refSlug = userId ? userId.slice(0, 8) : 'olugbenga';
+  const referralLink = `${BASE_URL}?ref=${refSlug}`;
 
   return (
     <div style={S.container}>
@@ -127,7 +146,12 @@ export default function Affiliate({ onBack }) {
                   value={referralLink}
                   style={{ flex:1, padding:14, background:'var(--bg-3)', border:'1px solid var(--gold)', borderRadius:'var(--radius)', color:'var(--gold)', fontSize:12, fontWeight:600 }}
                 />
-                <button onClick={() => { navigator.clipboard.writeText(referralLink); alert('Link Copied!'); }} style={{ padding:'0 12px', background:'var(--gold)', border:'none', borderRadius:'var(--radius)', fontWeight:700, cursor:'pointer' }}>COPY</button>
+                <button 
+                  onClick={() => handleCopy(referralLink)} 
+                  style={{ padding:'0 16px', background: copied ? 'var(--green, #22c55e)' : 'var(--gold)', border:'none', borderRadius:'var(--radius)', fontWeight:700, cursor:'pointer', fontSize:12, transition:'background 0.2s', whiteSpace:'nowrap' }}
+                >
+                  {copied ? 'Copied ✓' : 'COPY'}
+                </button>
               </div>
               <p style={{ fontSize:10, color:'var(--text-muted)', marginTop:12 }}>Share this link to earn 30% on every Gold upgrade.</p>
             </div>
@@ -140,9 +164,12 @@ export default function Affiliate({ onBack }) {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                style={{ width:'100%', padding:14, background:'var(--bg-3)', border:'1px solid var(--border)', borderRadius:'var(--radius)', color:'#fff', outline:'none' }}
+                style={{ width:'100%', padding:14, background:'var(--bg-3)', border:'1px solid var(--border)', borderRadius:'var(--radius)', color:'#fff', outline:'none', boxSizing:'border-box' }}
               />
               <button type="submit" style={S.btn}>APPLY FOR PARTNER ACCESS</button>
+              <p style={{ fontSize:10, color:'var(--text-muted)', marginTop:8, textAlign:'center' }}>
+                Your application will be sent to our team at {OWNER_EMAIL}
+              </p>
             </form>
           ) : (
             <div style={{ marginTop:32, textAlign:'center', padding:20, background:'var(--green-dim)', borderRadius:'var(--radius)', border:'1px solid var(--green)' }}>
