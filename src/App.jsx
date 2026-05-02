@@ -149,36 +149,13 @@ if (!user) {
     return <Affiliate onBack={() => setView('landing')} />;
 
   if (view === 'support')
-    return <Support />;
+    return <Support onBack={() => setView('landing')} />;
 
   if (view === 'privacy')
-    return <Privacy />;
+    return <Privacy onBack={() => setView('landing')} />;
 
   return (
-    <>
-      <LandingPage onGetStarted={(v) => setView(v === 'affiliate' ? 'affiliate' : 'auth')} />
-
-      <div style={{
-        textAlign: "center",
-        padding: 20,
-        fontSize: 12,
-        color: "var(--text-muted)"
-      }}>
-        <span
-          style={{ cursor: "pointer", marginRight: 16 }}
-          onClick={() => setView('privacy')}
-        >
-          Privacy Policy
-        </span>
-
-        <span
-          style={{ cursor: "pointer" }}
-          onClick={() => setView('support')}
-        >
-          Contact Support
-        </span>
-      </div>
-    </>
+    <LandingPage onGetStarted={(v) => setView(v === 'affiliate' ? 'affiliate' : 'auth')} />
   );
 }
 
