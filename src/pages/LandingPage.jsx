@@ -26,6 +26,8 @@ const FAQS = [
 
 export default function LandingPage({ onGetStarted }) {
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showRefund, setShowRefund] = useState(false);
   const [purchases, setPurchases] = useState(RECENT_PURCHASES);
   const [proofIndex, setProofIndex] = useState(0);
   const [showProof, setShowProof] = useState(true);
@@ -167,12 +169,14 @@ export default function LandingPage({ onGetStarted }) {
       <footer style={S.footer}>
         <div style={S.footerLinks}>
           <button onClick={() => setShowPrivacy(true)} style={S.footerLink}>PRIVACY POLICY</button>
-          <button onClick={() => setShowPrivacy(true)} style={S.footerLink}>TERMS OF SERVICE</button>
+          <button onClick={() => setShowTerms(true)} style={S.footerLink}>TERMS OF SERVICE</button>
+          <button onClick={() => setShowRefund(true)} style={S.footerLink}>REFUND POLICY</button>
           <button onClick={() => onGetStarted('affiliate')} style={{ ...S.footerLink, color: 'var(--gold)' }}>AFFILIATE PROGRAM</button>
-          <button style={S.footerLink}>CONTACT SUPPORT</button>
+          <a href="mailto:olugbenga1000@gmail.com" style={{ ...S.footerLink, textDecoration: 'none' }}>CONTACT SUPPORT</a>
         </div>
         <div style={S.footerLegal}>
           <p>© 2026 RiskPilot Gold. Not financial advice. Trading involves significant risk of loss.</p>
+          <p style={{ marginTop: 6 }}>Support: <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)', textDecoration: 'none' }}>olugbenga1000@gmail.com</a></p>
         </div>
       </footer>
 
@@ -187,17 +191,63 @@ export default function LandingPage({ onGetStarted }) {
         </div>
       )}
 
-      {/* PRIVACY MODAL */}
+      {/* PRIVACY POLICY MODAL */}
       {showPrivacy && (
         <div style={S.modalOverlay} onClick={() => setShowPrivacy(false)}>
           <div style={S.modalContent} onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 20 }}>Privacy & Terms</h2>
+            <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 4 }}>Privacy Policy</h2>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 24, fontFamily: 'var(--font-data)' }}>Last updated: May 2, 2026</p>
             <div style={S.modalBody}>
-              <p>RiskPilot is a software utility designed for informational purposes only. We do not provide financial advice or brokerage services.</p>
-              <p><strong>Data Privacy:</strong> We collect your email address for account management. Your trade data is stored securely in your private Supabase instance.</p>
-              <p><strong>Payments:</strong> All transactions are processed via Paystack. RiskPilot does not store your credit card information.</p>
+              <p><strong>1. Business Information</strong><br/>RiskPilot is operated by Olugbenga Adeyemi, reachable at <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a>.</p>
+              <p><strong>2. Information We Collect</strong><br/>We collect your email address and trade data solely for the purpose of providing account management and application functionality. We do not sell your data to third parties.</p>
+              <p><strong>3. Data Storage</strong><br/>Your trade data is stored securely via Supabase with enterprise-grade encryption. Only you can access your private trading records.</p>
+              <p><strong>4. Payments</strong><br/>All transactions are processed by Paystack, a PCI-DSS compliant payment processor. RiskPilot does not store your card details or banking information at any point.</p>
+              <p><strong>5. Cookies</strong><br/>We use minimal session cookies required for authentication. No third-party tracking cookies are set without your consent beyond Meta Pixel for ad performance measurement.</p>
+              <p><strong>6. Your Rights</strong><br/>You may request deletion of your account and associated data at any time by emailing <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a>.</p>
+              <p><strong>7. Disclaimer</strong><br/>RiskPilot is a software utility for informational and educational purposes only. It does not constitute financial advice or a brokerage service. Trading involves significant risk of loss.</p>
             </div>
             <button onClick={() => setShowPrivacy(false)} style={S.btnPrimary}>CLOSE</button>
+          </div>
+        </div>
+      )}
+
+      {/* TERMS OF SERVICE MODAL */}
+      {showTerms && (
+        <div style={S.modalOverlay} onClick={() => setShowTerms(false)}>
+          <div style={S.modalContent} onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 4 }}>Terms of Service</h2>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 24, fontFamily: 'var(--font-data)' }}>Last updated: May 2, 2026</p>
+            <div style={S.modalBody}>
+              <p><strong>1. Acceptance of Terms</strong><br/>By accessing or purchasing RiskPilot, you agree to be bound by these Terms of Service. If you do not agree, do not use the service.</p>
+              <p><strong>2. Service Description</strong><br/>RiskPilot provides a risk management calculator and trade journaling utility for XAUUSD and forex traders. It is a discipline tool only — it does not execute trades, manage funds, or provide investment advice.</p>
+              <p><strong>3. License</strong><br/>Upon payment, you receive a personal, non-transferable lifetime license to use RiskPilot Gold for your individual trading activities. Resale, redistribution, or sharing of your account credentials is strictly prohibited.</p>
+              <p><strong>4. Payments & Billing</strong><br/>Payments are processed securely via Paystack. The Gold Edition is a one-time payment of $47 (USD). You will not be charged recurring fees unless you are notified of and agree to a future subscription model.</p>
+              <p><strong>5. No Financial Advice</strong><br/>Nothing on RiskPilot constitutes financial, investment, or trading advice. All trading decisions are solely your responsibility. Past performance is not indicative of future results.</p>
+              <p><strong>6. Limitation of Liability</strong><br/>RiskPilot and its operators shall not be liable for any trading losses, direct or indirect damages arising from the use or inability to use the service.</p>
+              <p><strong>7. Modifications</strong><br/>We reserve the right to update these terms at any time. Continued use of the service following changes constitutes acceptance of the updated terms.</p>
+              <p><strong>8. Contact</strong><br/>Questions? Email us at <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a>.</p>
+            </div>
+            <button onClick={() => setShowTerms(false)} style={S.btnPrimary}>CLOSE</button>
+          </div>
+        </div>
+      )}
+
+      {/* REFUND POLICY MODAL */}
+      {showRefund && (
+        <div style={S.modalOverlay} onClick={() => setShowRefund(false)}>
+          <div style={S.modalContent} onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 4 }}>Refund Policy</h2>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 24, fontFamily: 'var(--font-data)' }}>Last updated: May 2, 2026</p>
+            <div style={S.modalBody}>
+              <p><strong>Our Commitment</strong><br/>We want you to be completely satisfied with RiskPilot Gold. If you are not happy with your purchase for any reason, we offer the following refund terms.</p>
+              <p><strong>7-Day Money-Back Guarantee</strong><br/>If you are unsatisfied within 7 days of your purchase, contact us at <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a> with your Paystack payment reference number and we will process a full refund with no questions asked.</p>
+              <p><strong>How to Request a Refund</strong><br/>1. Email <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a> within 7 days of purchase.<br/>2. Include your registered email and Paystack payment reference (starts with RP-).<br/>3. Refunds are processed within 3–5 business days back to your original payment method via Paystack.</p>
+              <p><strong>After 7 Days</strong><br/>Refunds are not available after the 7-day window. However, if you experience a technical issue that prevents you from accessing the service, please contact us and we will make it right.</p>
+              <p><strong>Chargebacks</strong><br/>We ask that you contact us before initiating a chargeback. Unauthorized chargebacks will result in immediate account suspension.</p>
+              <p><strong>Payment Processor</strong><br/>All payments are handled by Paystack (paystack.com), a regulated payment service provider. Refunds are issued via the same channel as your original payment.</p>
+              <p><strong>Contact</strong><br/><a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a> — we typically respond within 24 hours.</p>
+            </div>
+            <button onClick={() => setShowRefund(false)} style={S.btnPrimary}>CLOSE</button>
           </div>
         </div>
       )}
