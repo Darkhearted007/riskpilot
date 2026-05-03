@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route } from 'react-router-dom';
 
 import Support from './pages/Support';
 import Privacy from './pages/Privacy';
-import Contact from './pages/Contact';
 import { supabase } from './lib/supabaseClient';
 import Calculator from './pages/Calculator';
 import Journal from './pages/Journal';
