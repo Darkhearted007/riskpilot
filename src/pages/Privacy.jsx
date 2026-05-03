@@ -15,7 +15,7 @@ export default function Privacy({ onBack }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, fontSize: 14, color: 'var(--text-sub)', lineHeight: 1.7 }}>
           <section>
             <h3 style={{ color: 'var(--text)', marginBottom: 6 }}>1. Business Information</h3>
-            <p>RiskPilot is operated by Olugbenga Adeyemi. For any privacy-related concerns, contact us at <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a>.</p>
+            <p>RiskPilot is operated by Olugbenga Ajayi. For any privacy-related concerns, contact us at <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a>.</p>
           </section>
 
           <section>

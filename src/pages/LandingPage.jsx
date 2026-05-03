@@ -198,7 +198,7 @@ export default function LandingPage({ onGetStarted }) {
             <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: 4 }}>Privacy Policy</h2>
             <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 24, fontFamily: 'var(--font-data)' }}>Last updated: May 2, 2026</p>
             <div style={S.modalBody}>
-              <p><strong>1. Business Information</strong><br/>RiskPilot is operated by Olugbenga Adeyemi, reachable at <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a>.</p>
+              <p><strong>1. Business Information</strong><br/>RiskPilot is operated by Olugbenga Ajayi, reachable at <a href="mailto:olugbenga1000@gmail.com" style={{ color: 'var(--gold)' }}>olugbenga1000@gmail.com</a>.</p>
               <p><strong>2. Information We Collect</strong><br/>We collect your email address and trade data solely for the purpose of providing account management and application functionality. We do not sell your data to third parties.</p>
               <p><strong>3. Data Storage</strong><br/>Your trade data is stored securely via Supabase with enterprise-grade encryption. Only you can access your private trading records.</p>
               <p><strong>4. Payments</strong><br/>All transactions are processed by Paystack, a PCI-DSS compliant payment processor. RiskPilot does not store your card details or banking information at any point.</p>
