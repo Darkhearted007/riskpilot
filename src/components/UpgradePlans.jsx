@@ -1,29 +1,42 @@
 import React from "react";
+import { useAuth } from "../context/AuthContext";
 
 const PLANS = [
   {
     name: "Pro",
     price: "₦5,000 / month",
     url: "https://paystack.shop/pay/riskpilot-pro",
+    plan: "pro",
     color: "#4CAF82",
   },
   {
     name: "Pro+",
     price: "₦15,000 / month",
     url: "https://paystack.shop/pay/riskpilot-pro-plus",
+    plan: "pro_plus",
     color: "#7B6FF0",
   },
   {
     name: "Elite",
     price: "₦30,000 / month",
     url: "https://paystack.shop/pay/riskpilot-elite",
+    plan: "elite",
     color: "#E05C5C",
   },
 ];
 
 export default function UpgradePlans() {
-  const handleClick = (url) => {
-    window.location.href = url;
+  const { user } = useAuth();
+
+  const handleClick = (plan) => {
+    const url = new URL(plan.url);
+
+    // 🔥 attach identity (critical for webhook)
+    url.searchParams.append("userId", user?.id || "");
+    url.searchParams.append("email", user?.email || "");
+    url.searchParams.append("plan", plan.plan);
+
+    window.location.href = url.toString();
   };
 
   return (
@@ -42,7 +55,7 @@ export default function UpgradePlans() {
           <p style={{ color: "#aaa" }}>{plan.price}</p>
 
           <button
-            onClick={() => handleClick(plan.url)}
+            onClick={() => handleClick(plan)}
             style={{
               marginTop: 10,
               padding: "10px 16px",

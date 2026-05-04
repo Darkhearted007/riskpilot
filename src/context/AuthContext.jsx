@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext();
@@ -8,7 +14,9 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ---------------- PLAN DERIVATION ---------------- */
+  /* =========================
+     PLAN DERIVATION
+  ========================= */
   const getPlan = useCallback((profile) => {
     if (!profile) return "FREE";
 
@@ -21,11 +29,14 @@ export function AuthProvider({ children }) {
 
   const plan = getPlan(profile);
 
-  const isPro = plan === "PRO" || plan === "PRO_PLUS" || plan === "ELITE";
+  const isPro =
+    plan === "PRO" || plan === "PRO_PLUS" || plan === "ELITE";
   const isProPlus = plan === "PRO_PLUS" || plan === "ELITE";
   const isElite = plan === "ELITE";
 
-  /* ---------------- FETCH PROFILE ---------------- */
+  /* =========================
+     FETCH PROFILE
+  ========================= */
   const fetchProfile = useCallback(async (userId) => {
     const { data, error } = await supabase
       .from("profiles")
@@ -41,13 +52,17 @@ export function AuthProvider({ children }) {
     setProfile(data);
   }, []);
 
-  /* ---------------- REFRESH (USED AFTER PAYSTACK) ---------------- */
+  /* =========================
+     MANUAL REFRESH (WEBHOOK USE)
+  ========================= */
   const refreshProfile = useCallback(async () => {
     if (!user) return;
     await fetchProfile(user.id);
   }, [user, fetchProfile]);
 
-  /* ---------------- AUTH INIT ---------------- */
+  /* =========================
+     AUTH INITIALIZATION
+  ========================= */
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user || null;
@@ -57,23 +72,57 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((_event, session) => {
-        const u = session?.user || null;
-        setUser(u);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user || null;
+      setUser(u);
 
-        if (u) fetchProfile(u.id);
-        else setProfile(null);
-      });
+      if (u) fetchProfile(u.id);
+      else setProfile(null);
+    });
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  /* ---------------- PLAN FEATURES ---------------- */
+  /* =========================
+     REAL-TIME SUBSCRIPTION (🔥 LIVE UPGRADE)
+  ========================= */
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel("realtime-profile")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log("🔄 Profile updated in real-time:", payload.new);
+          setProfile(payload.new);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  /* =========================
+     FEATURE FLAGS
+  ========================= */
   const canUseAdvancedRiskTools = isPro;
   const canAccessJournalAI = isProPlus;
   const canAccessEliteSignals = isElite;
 
+  /* =========================
+     CONTEXT VALUE
+  ========================= */
   return (
     <AuthContext.Provider
       value={{
