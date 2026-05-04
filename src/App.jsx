@@ -1,21 +1,25 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
+import { supabase } from "./lib/supabaseClient";
 
-import Support from './pages/Support';
-import Privacy from './pages/Privacy';
-import { supabase } from './lib/supabaseClient';
-import Calculator from './pages/Calculator';
-import Journal from './pages/Journal';
-import Dashboard from './pages/Dashboard';
-import LandingPage from './pages/LandingPage';
-import Affiliate from './pages/Affiliate';
-import AuthScreen from './components/AuthScreen';
-import AppHeader from './components/AppHeader';
-import TabBar from './components/TabBar';
-import PaystackButton from './components/PaystackButton';
-import { Pixel } from './lib/marketing';
-import './styles/globals.css';
+import Support from "./pages/Support";
+import Privacy from "./pages/Privacy";
+import Calculator from "./pages/Calculator";
+import Journal from "./pages/Journal";
+import Dashboard from "./pages/Dashboard";
+import LandingPage from "./pages/LandingPage";
+import Affiliate from "./pages/Affiliate";
+import AuthScreen from "./components/AuthScreen";
+import AppHeader from "./components/AppHeader";
+import TabBar from "./components/TabBar";
+import UpgradePlans from "./components/UpgradePlans";
 
-/* ---------------- ERROR BOUNDARY ---------------- */
+import AdminDashboard from "./pages/admin/Dashboard";
+import Users from "./pages/admin/Users";
+import Transactions from "./pages/admin/Transactions";
+
+import "./styles/globals.css";
+
+/* ================= ERROR BOUNDARY ================= */
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -29,18 +33,8 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.error) {
       return (
-        <div style={{
-          padding: 24,
-          color: '#ef4444',
-          fontFamily: 'monospace',
-          fontSize: 12,
-          background: '#0a0e13',
-          minHeight: '50vh',
-          whiteSpace: 'pre-wrap'
-        }}>
+        <div style={{ padding: 24, color: "#ef4444" }}>
           {this.state.error.toString()}
-          {'\n\n'}
-          {this.state.error.stack}
         </div>
       );
     }
@@ -48,61 +42,39 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-/* ---------------- MAIN APP ---------------- */
+/* ================= MAIN APP ================= */
 export default function App() {
-
-  /* ---------------- STATE ---------------- */
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [tab, setTab] = useState('calc');
-  const [view, setView] = useState('landing');
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const isConfigured =
-    import.meta.env.VITE_SUPABASE_URL &&
-    import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const [tab, setTab] = useState("calc");
+  const [view, setView] = useState("landing");
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
-  /* ---------------- TAB HANDLER ---------------- */
-  const handleTabChange = (t) => {
-    setTab(t);
-    window.scrollTo(0, 0);
-  };
-
-  /* ---------------- PIXEL INIT ---------------- */
-  useEffect(() => {
-    Pixel.init('1313953607262542');
-
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get('ref');
-    if (ref) {
-      localStorage.setItem('rp_referrer', ref);
-    }
-  }, []);
-
-  /* ---------------- FETCH PROFILE ---------------- */
+  /* ================= FETCH PROFILE ================= */
   const fetchProfile = useCallback(async (userId) => {
     const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
       .single();
 
     if (data) setProfile(data);
   }, []);
 
-  /* ---------------- AUTH STATE ---------------- */
+  /* ================= AUTH INIT ================= */
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
 
       if (u) {
-        setView('app');
         fetchProfile(u.id);
+        setView("app");
       }
 
-      setAuthLoading(false);
+      setLoading(false);
     });
 
     const { data: { subscription } } =
@@ -111,135 +83,135 @@ export default function App() {
         setUser(u);
 
         if (u) {
-          setView('app');
           fetchProfile(u.id);
+          setView("app");
         } else {
-          setView('landing');
           setProfile(null);
+          setView("landing");
         }
       });
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  /* ---------------- LOADING STATE ---------------- */
-  if (authLoading) {
+  /* ================= PLAN LOGIC ================= */
+  const plan = profile?.plan?.toUpperCase() || "FREE";
+  const role = profile?.role || "user";
+
+  const isPro = ["PRO", "PRO_PLUS", "ELITE"].includes(plan);
+  const isElite = plan === "ELITE";
+  const isAdmin = role === "admin";
+
+  /* ================= LOADING ================= */
+  if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff'
-      }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         Loading RiskPilot...
       </div>
     );
   }
 
-  /* ---------------- PUBLIC ROUTES ---------------- */
-  // PUBLIC VIEWS
-if (!user) {
-  if (view === 'auth')
-    return <AuthScreen onAuth={(u) => { setUser(u); setView('app'); fetchProfile(u.id); }} />;
+  /* ================= PUBLIC ROUTES ================= */
+  if (!user) {
+    if (view === "auth")
+      return <AuthScreen onAuth={(u) => { setUser(u); fetchProfile(u.id); }} />;
 
-  if (view === 'affiliate')
-    return <Affiliate onBack={() => setView('landing')} />;
+    if (view === "affiliate")
+      return <Affiliate onBack={() => setView("landing")} />;
 
-  if (view === 'support')
-    return <Support onBack={() => setView('landing')} />;
+    if (view === "support")
+      return <Support onBack={() => setView("landing")} />;
 
-  if (view === 'privacy')
-    return <Privacy onBack={() => setView('landing')} />;
+    if (view === "privacy")
+      return <Privacy onBack={() => setView("landing")} />;
 
+    return <LandingPage onGetStarted={() => setView("auth")} />;
+  }
+
+  /* ================= ADMIN PANEL ================= */
+  if (window.location.pathname.startsWith("/admin")) {
+    if (!isAdmin) {
+      return (
+        <div style={{ padding: 40 }}>
+          <h2>Unauthorized</h2>
+          <p>You do not have admin access.</p>
+        </div>
+      );
+    }
+
+    return (
+      <ErrorBoundary>
+        <AdminDashboard>
+          <Users />
+          <Transactions />
+        </AdminDashboard>
+      </ErrorBoundary>
+    );
+  }
+
+  /* ================= MAIN APP ================= */
   return (
-    <LandingPage onGetStarted={(v) => setView(v === 'affiliate' ? 'affiliate' : 'auth')} />
-  );
-}
-
-  /* ---------------- PRIVATE APP ---------------- */
-  return (
-    <div style={{
-      maxWidth: 520,
-      margin: '0 auto',
-      minHeight: '100vh',
-      background: 'var(--bg-1)',
-      position: 'relative'
-    }}>
-
+    <div style={{ maxWidth: 520, margin: "0 auto", minHeight: "100vh" }}>
       <AppHeader
         user={user}
-        isGold={profile?.is_gold}
+        plan={plan}
         onSignOut={() => {
+          supabase.auth.signOut();
           setUser(null);
-          setView('landing');
         }}
-        onOpenUpgrade={() => setShowUpgradeModal(true)}
+        onUpgrade={() => setShowUpgrade(true)}
       />
 
       <main style={{ paddingBottom: 80 }}>
-        {tab === 'calc' && (
+        {tab === "calc" && (
           <ErrorBoundary>
-            <Calculator
-              user={user}
-              isGold={profile?.is_gold}
-              onUpgrade={() => setShowUpgradeModal(true)}
-            />
+            <Calculator user={user} isPro={isPro} />
           </ErrorBoundary>
         )}
 
-        {tab === 'journal' && (
+        {tab === "journal" && (
           <ErrorBoundary>
-            <Journal user={user} isGold={profile?.is_gold} />
+            {isPro ? (
+              <Journal user={user} />
+            ) : (
+              <UpgradePlans />
+            )}
           </ErrorBoundary>
         )}
 
-        {tab === 'dashboard' && (
+        {tab === "dashboard" && (
           <ErrorBoundary>
-            <Dashboard user={user} isGold={profile?.is_gold} />
+            <Dashboard user={user} isElite={isElite} />
           </ErrorBoundary>
         )}
       </main>
 
-      <TabBar active={tab} setActive={handleTabChange} />
+      <TabBar active={tab} setActive={setTab} />
 
-      {/* ---------------- UPGRADE MODAL ---------------- */}
-      {showUpgradeModal && !profile?.is_gold && (
+      {/* ================= UPGRADE MODAL ================= */}
+      {showUpgrade && (
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             inset: 0,
-            background: 'rgba(0,0,0,0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
+            background: "rgba(0,0,0,0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
           }}
-          onClick={() => setShowUpgradeModal(false)}
+          onClick={() => setShowUpgrade(false)}
         >
           <div
             style={{
-              background: 'var(--bg-2)',
+              background: "#111",
               padding: 32,
-              borderRadius: 16,
-              maxWidth: 400,
-              width: '100%'
+              borderRadius: 12,
+              width: 400
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2>Upgrade RiskPilot</h2>
-
-            <PaystackButton
-              user={user}
-              onSuccess={() => {
-                fetchProfile(user.id);
-                setShowUpgradeModal(false);
-              }}
-            />
-
-            <button onClick={() => setShowUpgradeModal(false)}>
-              Close
-            </button>
+            <h2>Upgrade Your Plan</h2>
+            <UpgradePlans />
           </div>
         </div>
       )}

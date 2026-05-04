@@ -9,35 +9,50 @@ import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext();
 
+/* =========================
+   PLAN CONSTANTS (SINGLE SOURCE OF TRUTH)
+========================= */
+const PLANS = {
+  FREE: "FREE",
+  PRO: "PRO",
+  PRO_PLUS: "PRO_PLUS",
+  ELITE: "ELITE",
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   /* =========================
-     PLAN DERIVATION
+     NORMALIZE PLAN
   ========================= */
   const getPlan = useCallback((profile) => {
-    if (!profile) return "FREE";
-
-    if (profile.plan) return profile.plan;
-
-    if (profile.is_gold) return "PRO";
-
-    return "FREE";
+    if (!profile) return PLANS.FREE;
+    return profile.plan || PLANS.FREE;
   }, []);
 
   const plan = getPlan(profile);
 
-  const isPro =
-    plan === "PRO" || plan === "PRO_PLUS" || plan === "ELITE";
-  const isProPlus = plan === "PRO_PLUS" || plan === "ELITE";
-  const isElite = plan === "ELITE";
+  /* =========================
+     ACCESS RULES (UI LOCK SYSTEM)
+  ========================= */
+  const isPro = [PLANS.PRO, PLANS.PRO_PLUS, PLANS.ELITE].includes(plan);
+  const isProPlus = [PLANS.PRO_PLUS, PLANS.ELITE].includes(plan);
+  const isElite = plan === PLANS.ELITE;
+
+  const permissions = {
+    canUseAdvancedRiskTools: isPro,
+    canAccessJournalAI: isProPlus,
+    canAccessEliteSignals: isElite,
+  };
 
   /* =========================
-     FETCH PROFILE
+     FETCH PROFILE (SOURCE OF TRUTH)
   ========================= */
   const fetchProfile = useCallback(async (userId) => {
+    if (!userId) return;
+
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -45,7 +60,7 @@ export function AuthProvider({ children }) {
       .single();
 
     if (error) {
-      console.error("Profile fetch error:", error);
+      console.error("Profile fetch error:", error.message);
       return;
     }
 
@@ -53,10 +68,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   /* =========================
-     MANUAL REFRESH (WEBHOOK USE)
+     REFRESH AFTER PAYMENT / WEBHOOK
   ========================= */
   const refreshProfile = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     await fetchProfile(user.id);
   }, [user, fetchProfile]);
 
@@ -64,35 +79,55 @@ export function AuthProvider({ children }) {
      AUTH INITIALIZATION
   ========================= */
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user || null;
-      setUser(u);
+    let mounted = true;
 
-      if (u) fetchProfile(u.id);
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
+      const sessionUser = data?.session?.user || null;
+
+      if (!mounted) return;
+
+      setUser(sessionUser);
+
+      if (sessionUser) {
+        await fetchProfile(sessionUser.id);
+      }
+
       setLoading(false);
-    });
+    };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user || null;
-      setUser(u);
+    init();
 
-      if (u) fetchProfile(u.id);
-      else setProfile(null);
-    });
+    /* =========================
+       AUTH STATE LISTENER
+    ========================= */
+    const { data: subscription } =
+      supabase.auth.onAuthStateChange(async (_event, session) => {
+        const sessionUser = session?.user || null;
 
-    return () => subscription.unsubscribe();
+        setUser(sessionUser);
+
+        if (sessionUser) {
+          await fetchProfile(sessionUser.id);
+        } else {
+          setProfile(null);
+        }
+      });
+
+    return () => {
+      mounted = false;
+      subscription.subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   /* =========================
-     REAL-TIME SUBSCRIPTION (🔥 LIVE UPGRADE)
+     REALTIME PROFILE UPDATES (ENTERPRISE FEATURE)
   ========================= */
   useEffect(() => {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel("realtime-profile")
+      .channel("profiles-realtime")
       .on(
         "postgres_changes",
         {
@@ -102,7 +137,6 @@ export function AuthProvider({ children }) {
           filter: `id=eq.${user.id}`,
         },
         (payload) => {
-          console.log("🔄 Profile updated in real-time:", payload.new);
           setProfile(payload.new);
         }
       )
@@ -114,32 +148,27 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   /* =========================
-     FEATURE FLAGS
-  ========================= */
-  const canUseAdvancedRiskTools = isPro;
-  const canAccessJournalAI = isProPlus;
-  const canAccessEliteSignals = isElite;
-
-  /* =========================
-     CONTEXT VALUE
+     FINAL CONTEXT VALUE
   ========================= */
   return (
     <AuthContext.Provider
       value={{
+        /* user state */
         user,
         profile,
-        plan,
+        loading,
 
+        /* plan system */
+        plan,
         isPro,
         isProPlus,
         isElite,
 
-        canUseAdvancedRiskTools,
-        canAccessJournalAI,
-        canAccessEliteSignals,
+        /* permissions */
+        ...permissions,
 
+        /* actions */
         refreshProfile,
-        loading,
       }}
     >
       {children}
@@ -147,6 +176,9 @@ export function AuthProvider({ children }) {
   );
 }
 
+/* =========================
+   HOOK
+========================= */
 export function useAuth() {
   return useContext(AuthContext);
 }
