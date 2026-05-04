@@ -65,7 +65,21 @@ export default function App() {
 
   /* ================= AUTH INIT ================= */
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+  let mounted = true;
+
+  // 🧯 safety fallback: prevent infinite loading
+  const timeout = setTimeout(() => {
+    console.warn("[RiskPilot] Auth timeout fallback triggered");
+    setLoading(false);
+  }, 5000);
+
+  // ================= GET SESSION =================
+  supabase.auth.getSession()
+    .then(({ data: { session } }) => {
+      if (!mounted) return;
+
+      clearTimeout(timeout);
+
       const u = session?.user ?? null;
       setUser(u);
 
@@ -75,24 +89,37 @@ export default function App() {
       }
 
       setLoading(false);
+    })
+    .catch((err) => {
+      console.error("[Auth Init Error]", err);
+      clearTimeout(timeout);
+      setLoading(false);
     });
 
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((_e, session) => {
-        const u = session?.user ?? null;
-        setUser(u);
+  // ================= LISTENER =================
+  const { data: { subscription } } =
+    supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
 
-        if (u) {
-          fetchProfile(u.id);
-          setView("app");
-        } else {
-          setProfile(null);
-          setView("landing");
-        }
-      });
+      if (u) {
+        fetchProfile(u.id);
+        setView("app");
+      } else {
+        setProfile(null);
+        setView("landing");
+      }
 
-    return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+      setLoading(false);
+    });
+
+  // ================= CLEANUP =================
+  return () => {
+    mounted = false;
+    clearTimeout(timeout);
+    subscription.unsubscribe();
+  };
+}, [fetchProfile]);
 
   /* ================= PLAN LOGIC ================= */
   const plan = profile?.plan?.toUpperCase() || "FREE";
