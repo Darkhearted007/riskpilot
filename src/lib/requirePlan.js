@@ -1,22 +1,22 @@
-import { supabase } from "./supabaseClient";
+export const PLANS = {
+  FREE: "FREE",
+  PRO: "PRO",
+  PRO_PLUS: "PRO_PLUS",
+  ELITE: "ELITE",
+};
 
-export async function requirePlan(email, allowedPlans = []) {
-  const { data } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("email", email)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .single();
+export function normalizePlan(profile) {
+  if (!profile) return PLANS.FREE;
+  return profile.plan?.toUpperCase() || PLANS.FREE;
+}
 
-  if (!data) return false;
+export function hasMinPlan(userPlan, requiredPlan) {
+  const rank = {
+    FREE: 0,
+    PRO: 1,
+    PRO_PLUS: 2,
+    ELITE: 3,
+  };
 
-  const expired =
-    data.expires_at && new Date(data.expires_at) < new Date();
-
-  if (expired) return false;
-
-  if (allowedPlans.length === 0) return true;
-
-  return allowedPlans.includes(data.plan.toLowerCase());
+  return rank[userPlan] >= rank[requiredPlan];
 }

@@ -5,39 +5,52 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+/**
+ * Runs daily via Vercel Cron
+ * Downgrades expired subscriptions
+ */
+
 export default async function handler(req, res) {
   try {
     const now = new Date().toISOString();
 
-    const { data: expired } = await supabase
-      .from("subscriptions")
+    // 1. Find expired paid users
+    const { data: users, error } = await supabase
+      .from("profiles")
       .select("*")
-      .lt("end_date", now)
-      .eq("status", "active");
+      .neq("plan", "FREE")
+      .lt("subscription_end", now);
 
-    for (const sub of expired || []) {
-      await supabase
-        .from("profiles")
-        .update({ plan: "FREE" })
-        .eq("user_id", sub.user_id);
-
-      await supabase
-        .from("subscriptions")
-        .update({ status: "expired" })
-        .eq("id", sub.id);
-
-      await supabase.from("audit_logs").insert({
-        user_id: sub.user_id,
-        action: "SUBSCRIPTION_EXPIRED",
-        entity: "subscription",
-        entity_id: sub.id,
+    if (error) {
+      return res.status(500).json({
+        error: "FETCH_FAILED",
+        details: error.message,
       });
     }
 
-    return res.status(200).json({
-      processed: expired?.length || 0,
+    let downgraded = 0;
+
+    for (const user of users || []) {
+      await supabase
+        .from("profiles")
+        .update({
+          plan: "FREE",
+          is_gold: false,
+          updated_at: now,
+        })
+        .eq("id", user.id);
+
+      downgraded++;
+    }
+
+    return res.json({
+      success: true,
+      downgraded,
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      error: "CRON_FAILED",
+      details: err.message,
+    });
   }
 }
