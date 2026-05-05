@@ -35,6 +35,11 @@
   --radius-xl:    22px;
   --shadow-gold:  0 0 40px rgba(212,175,55,0.08);
   --shadow-card:  0 4px 24px rgba(0,0,0,0.4);
+  
+  /* Responsive breakpoints */
+  --mobile-width: 520px;
+  --tablet-width: 768px;
+  --desktop-width: 1200px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,6 +51,28 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+}
+
+/* Responsive container */
+.app-container {
+  max-width: var(--mobile-width);
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  .app-container {
+    max-width: 600px;
+    box-shadow: 0 0 60px rgba(0,0,0,0.5);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+}
+
+@media (min-width: 1200px) {
+  .app-container {
+    max-width: 680px;
+  }
 }
 body::before {
   content: '';
@@ -90,3 +117,56 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 .stagger > *:nth-child(2) { animation-delay: 0.1s;  opacity: 0; animation-fill-mode: forwards; animation-name: fadeUp; animation-duration: 0.4s; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
 .stagger > *:nth-child(3) { animation-delay: 0.15s; opacity: 0; animation-fill-mode: forwards; animation-name: fadeUp; animation-duration: 0.4s; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
 .stagger > *:nth-child(4) { animation-delay: 0.2s;  opacity: 0; animation-fill-mode: forwards; animation-name: fadeUp; animation-duration: 0.4s; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
+
+/* Tab Bar */
+.tab-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  max-width: var(--mobile-width);
+  margin: 0 auto;
+  backdrop-filter: blur(10px);
+}
+
+@media (min-width: 768px) {
+  .tab-bar { max-width: 600px; }
+}
+
+@media (min-width: 1200px) {
+  .tab-bar { max-width: 680px; }
+}
+
+.tab-btn {
+  padding: 14px 8px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4;
+  font-family: var(--font-body);
+  color: var(--text-sub);
+  transition: all 0.2s;
+}
+
+.tab-btn span:first-child {
+  font-size: 16;
+  line-height: 1;
+}
+
+.tab-btn span:last-child {
+  font-size: 10;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.tab-btn.active {
+  color: var(--gold);
+}

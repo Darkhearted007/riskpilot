@@ -188,7 +188,7 @@ export default function App() {
 
   /* ================= MAIN APP ================= */
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", minHeight: "100vh" }}>
+    <div className="app-container">
       <AppHeader
         user={user}
         plan={plan}
