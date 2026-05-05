@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-export default function AppHeader({ user, isGold, onSignOut, onOpenUpgrade }) {
+export default function AppHeader({ user, plan, onSignOut, onUpgrade }) {
   const [open, setOpen] = useState(false);
+  const isPaid = plan && plan !== 'free';
 
   return (
     <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 50 }}>
@@ -11,19 +12,19 @@ export default function AppHeader({ user, isGold, onSignOut, onOpenUpgrade }) {
         <span style={{ fontSize: 20, color: 'var(--gold)', filter: 'drop-shadow(0 0 6px var(--gold-glow))' }}>◈</span>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em', lineHeight: 1 }}>RiskPilot</div>
-          <div style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'var(--gold)', letterSpacing: '0.12em', lineHeight: 1, marginTop: 2 }}>
-            {isGold ? 'GOLD EDITION' : 'LITE EDITION'}
+          <div style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: isPaid ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: '0.12em', lineHeight: 1, marginTop: 2 }}>
+            {isPaid ? plan.toUpperCase() : 'FREE'}
           </div>
         </div>
       </div>
 
-      {/* Upgrade CTA for non-gold users */}
-      {!isGold && (
+      {/* Upgrade CTA for free users */}
+      {!isPaid && (
         <button 
-          onClick={onOpenUpgrade}
+          onClick={onUpgrade}
           style={{ background: 'var(--gold-dim)', border: '1px solid var(--border-gold)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', color: 'var(--gold)', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-data)', letterSpacing: '0.05em' }}
         >
-          GO GOLD $47
+          UPGRADE
         </button>
       )}
 

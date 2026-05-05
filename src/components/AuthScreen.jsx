@@ -77,7 +77,7 @@ export default function AuthScreen({ onAuth }) {
       <div style={{ textAlign: 'center', marginBottom: 36, zIndex: 1 }}>
         <div style={{ fontSize: 44, color: 'var(--gold)', lineHeight: 1, marginBottom: 10, filter: 'drop-shadow(0 0 20px var(--gold-glow))' }}>◈</div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>RiskPilot</div>
-        <div style={{ fontFamily: 'var(--font-data)', fontSize: 10, color: 'var(--gold)', letterSpacing: '0.12em', marginTop: 4 }}>GOLD EDITION · XAUUSD DISCIPLINE ENGINE</div>
+        <div style={{ fontFamily: 'var(--font-data)', fontSize: 10, color: 'var(--gold)', letterSpacing: '0.12em', marginTop: 4 }}>PRECISION TRADING DISCIPLINE</div>
       </div>
       <div style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border-gold)', borderRadius: 'var(--radius-xl)', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 18, zIndex: 1, boxShadow: 'var(--shadow-gold)' }}>
         <p style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>

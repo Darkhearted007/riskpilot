@@ -35,7 +35,7 @@ export default function RiskPilotInteractiveBanner() {
             fontSize: 12
           }}
         >
-          GOLD EDITION
+          RISKPILOT PRO
         </div>
 
         <div style={{ fontSize: 12, opacity: 0.7 }}>
@@ -45,7 +45,7 @@ export default function RiskPilotInteractiveBanner() {
 
       {/* TITLE */}
       <h1 style={{ fontSize: 42, marginTop: 20 }}>
-        RiskPilot <span style={{ color: "#D4AF37" }}>Gold</span>
+        RiskPilot <span style={{ color: "#D4AF37" }}>Pro</span>
       </h1>
 
       <p style={{ opacity: 0.8 }}>
