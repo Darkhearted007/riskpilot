@@ -104,22 +104,20 @@ export default function UpgradePlans() {
         Cancel anytime. Secure payment via Paystack.
       </p>
 
-      <div style={{
+  <div style={{
         width: "100%",
-        overflowX: "auto",
-        WebkitOverflowScrolling: "touch",
-        paddingBottom: 8,
-        scrollbarWidth: "none",
-        msOverflowStyle: "none",
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+        padding: "4px 0 8px",
       }}>
         <div style={{
           display: "flex",
-          flexDirection: "row",
+          flexDirection: "column",
           gap: 14,
-          minWidth: "max-content",
-          padding: "4px 4px 8px",
-        }}>
-          {PLANS.map((plan) => (
+      }}>
+          {	
+PLANS.map((plan) => (
             <div
               key={plan.name}
               style={{
