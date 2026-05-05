@@ -1,5 +1,4 @@
 import React from "react";
-import { useAuth } from "../context/AuthContext";
 
 const PLANS = [
   {
@@ -57,8 +56,7 @@ const PLANS = [
   },
 ];
 
-export default function UpgradePlans() {
-  const { user } = useAuth();
+export default function UpgradePlans({ user }) {
 
   const handleClick = (plan) => {
     const url = new URL(plan.url);
