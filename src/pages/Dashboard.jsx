@@ -84,6 +84,9 @@ export default function Dashboard({ user, isGold }) {
   const fetchTrades = useCallback(async (isRefresh = false) => {
     if (isRefresh) setLoading(true);
     setError('');
+    
+    console.log('[Dashboard] Fetching trades for user:', user?.id);
+    
     try {
       const { data, error: fetchError } = await supabase
         .from('trades')
@@ -92,18 +95,23 @@ export default function Dashboard({ user, isGold }) {
         .order('created_at', { ascending: false })
         .limit(100);
 
+      console.log('[Dashboard] Trades response:', { data, error: fetchError });
+
       if (fetchError) {
-        setError('Failed to load trades. Check your connection.');
+        console.error('[Dashboard] Fetch error:', fetchError);
+        setError('Failed to load trades: ' + fetchError.message);
       } else {
         setTrades(data || []);
         setLastFetch(new Date());
+        console.log('[Dashboard] Loaded', data?.length || 0, 'trades');
       }
-    } catch {
-      setError('An unexpected error occurred.');
+    } catch (err) {
+      console.error('[Dashboard] Catch error:', err);
+      setError('An unexpected error occurred: ' + err.message);
     } finally {
       setLoading(false);
     }
-  }, [user.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchTrades();
