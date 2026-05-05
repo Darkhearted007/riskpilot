@@ -198,11 +198,7 @@ export default function App() {
 
         {tab === "journal" && (
           <ErrorBoundary>
-            {isPro ? (
-              <Journal user={user} />
-            ) : (
-              <UpgradePlans />
-            )}
+            <Journal user={user} />
           </ErrorBoundary>
         )}
 
