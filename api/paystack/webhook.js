@@ -16,6 +16,15 @@ async function getRawBody(req) {
   return Buffer.concat(chunks).toString();
 }
 
+/**
+ * Calculate subscription end date (1 month from now)
+ */
+function getSubscriptionEnd() {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 1);
+  return date.toISOString();
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
@@ -41,29 +50,33 @@ export default async function handler(req, res) {
       const reference = event.data.reference;
       const amount = event.data.amount;
 
-      // 1. Determine plan
+      // 1. Determine plan from reference
       let plan = "FREE";
       if (reference.includes("elite")) plan = "ELITE";
-      else if (reference.includes("pro-plus")) plan = "PRO_PLUS";
+      else if (reference.includes("pro-plus") || reference.includes("pro_plus")) plan = "PRO_PLUS";
       else if (reference.includes("pro")) plan = "PRO";
 
-      // 2. Get user
+      // 2. Calculate subscription end date (1 month for monthly plans)
+      const subscriptionEnd = getSubscriptionEnd();
+
+      // 3. Get user profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("email", email)
         .single();
 
-      // 3. Update user plan
+      // 4. Update user plan with subscription end date
       await supabase
         .from("profiles")
         .update({
-          plan,
+          plan: plan,
+          subscription_end: subscriptionEnd,
           updated_at: new Date().toISOString(),
         })
         .eq("email", email);
 
-      // 4. TRANSACTION LOG
+      // 5. RECORD TRANSACTION
       await recordTransaction({
         user_id: profile?.id,
         email,
@@ -72,17 +85,20 @@ export default async function handler(req, res) {
         plan,
       });
 
-      // 5. LEDGER ENTRY
+      // 6. LEDGER ENTRY
       await writeLedger({
         user_id: profile?.id,
-        type: "upgrade",
+        type: "subscription_upgrade",
         amount,
-        meta: { plan, reference },
+        meta: { plan, reference, subscriptionEnd },
       });
+
+      console.log(`[Webhook] Subscription upgraded: ${email} to ${plan}, expires: ${subscriptionEnd}`);
     }
 
     return res.json({ success: true });
   } catch (err) {
+    console.error("[Webhook] Error:", err);
     return res.status(500).json({
       error: "WEBHOOK_FAILED",
       details: err.message,
