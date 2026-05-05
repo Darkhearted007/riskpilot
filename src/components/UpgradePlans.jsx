@@ -69,7 +69,12 @@ export default function UpgradePlans() {
   };
 
   return (
-    <div style={{ padding: "24px 0 8px", width: "100%" }}>
+    <div style={{
+      padding: "20px 16px 32px",
+      width: "100%",
+      maxWidth: 520,
+      margin: "0 auto",
+    }}>
       <p style={{
         fontFamily: "var(--font-data)",
         fontSize: 10,
@@ -96,78 +101,72 @@ export default function UpgradePlans() {
 
       <p style={{
         fontSize: 12,
-        color: "var(--text-muted)",
+        color: "var(--text-sub)",
         textAlign: "center",
         marginBottom: 24,
         fontFamily: "var(--font-data)",
       }}>
-        Cancel anytime. Secure payment via Paystack.
+        Cancel anytime · Secured by Paystack
       </p>
 
-  <div style={{
-        width: "100%",
+      {/* Vertical stack — scrolls naturally with page */}
+      <div style={{
         display: "flex",
         flexDirection: "column",
         gap: 14,
-        padding: "4px 0 8px",
       }}>
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
-      }}>
-          {	
-PLANS.map((plan) => (
-            <div
-              key={plan.name}
-              style={{
-                width: 230,
-                flexShrink: 0,
-                border: `1px solid ${plan.highlighted ? plan.color : "var(--border)"}`,
-                borderRadius: "var(--radius-lg)",
-                padding: "20px 18px",
-                background: plan.highlighted
-                  ? `linear-gradient(135deg, var(--surface) 0%, ${plan.color}15 100%)`
-                  : "var(--surface)",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <div style={{
-                display: "inline-block",
-                fontSize: 9,
-                fontWeight: 700,
-                fontFamily: "var(--font-data)",
-                letterSpacing: "0.08em",
-                padding: "3px 10px",
-                borderRadius: 20,
-                background: plan.highlighted ? plan.color : "var(--bg-3)",
-                color: plan.highlighted ? "#000" : "var(--text-muted)",
-                marginBottom: 14,
-                alignSelf: "flex-start",
-              }}>
-                {plan.highlighted ? "⭐ " : ""}{plan.tag}
-              </div>
+        {PLANS.map((plan) => (
+          <div
+            key={plan.name}
+            style={{
+              width: "100%",
+              border: `1px solid ${plan.highlighted ? plan.color : "var(--border-high)"}`,
+              borderRadius: "var(--radius-lg)",
+              padding: "20px 18px",
+              background: plan.highlighted
+                ? `linear-gradient(135deg, var(--surface) 0%, ${plan.color}15 100%)`
+                : "var(--surface)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 0,
+            }}
+          >
+            {/* Badge */}
+            <div style={{
+              display: "inline-block",
+              fontSize: 9,
+              fontWeight: 700,
+              fontFamily: "var(--font-data)",
+              letterSpacing: "0.08em",
+              padding: "3px 10px",
+              borderRadius: 20,
+              background: plan.highlighted ? plan.color : "var(--surface-top)",
+              color: plan.highlighted ? "#000" : "var(--text-muted)",
+              marginBottom: 14,
+              alignSelf: "flex-start",
+            }}>
+              {plan.highlighted ? "⭐ " : ""}{plan.tag}
+            </div>
 
+            {/* Name + Price row */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 16,
+            }}>
               <h3 style={{
                 fontFamily: "var(--font-display)",
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: 800,
                 color: plan.color,
-                marginBottom: 8,
               }}>
                 {plan.name}
               </h3>
-
-              <div style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 4,
-                marginBottom: 16,
-              }}>
+              <div style={{ textAlign: "right" }}>
                 <span style={{
                   fontFamily: "var(--font-data)",
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: 700,
                   color: plan.highlighted ? plan.color : "var(--text)",
                 }}>
@@ -177,69 +176,73 @@ PLANS.map((plan) => (
                   fontFamily: "var(--font-data)",
                   fontSize: 11,
                   color: "var(--text-muted)",
+                  marginLeft: 4,
                 }}>
                   {plan.period}
                 </span>
               </div>
-
-              <div style={{
-                height: 1,
-                background: "var(--border)",
-                marginBottom: 16,
-              }} />
-
-              <ul style={{
-                listStyle: "none",
-                padding: 0,
-                margin: "0 0 20px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-                flex: 1,
-              }}>
-                {plan.features.map((f, i) => (
-                  <li key={i} style={{
-                    fontSize: 12,
-                    color: "var(--text-sub)",
-                    lineHeight: 1.5,
-                  }}>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => handleClick(plan)}
-                style={{
-                  width: "100%",
-                  padding: "11px 16px",
-                  background: plan.highlighted ? plan.color : "transparent",
-                  border: `1px solid ${plan.color}`,
-                  borderRadius: "var(--radius)",
-                  cursor: "pointer",
-                  color: plan.highlighted ? "#000" : plan.color,
-                  fontWeight: 700,
-                  fontSize: 13,
-                  fontFamily: "var(--font-data)",
-                  letterSpacing: "0.06em",
-                  transition: "all 0.2s",
-                }}
-              >
-                Get {plan.name} →
-              </button>
             </div>
-          ))}
-        </div>
+
+            {/* Divider */}
+            <div style={{
+              height: 1,
+              background: "var(--border)",
+              marginBottom: 16,
+            }} />
+
+            {/* Features */}
+            <ul style={{
+              listStyle: "none",
+              padding: 0,
+              margin: "0 0 20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}>
+              {plan.features.map((f, i) => (
+                <li key={i} style={{
+                  fontSize: 13,
+                  color: "var(--text-sub)",
+                  lineHeight: 1.5,
+                  fontFamily: "var(--font-body)",
+                }}>
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            <button
+              onClick={() => handleClick(plan)}
+              style={{
+                width: "100%",
+                padding: "13px 16px",
+                background: plan.highlighted ? plan.color : "transparent",
+                border: `1px solid ${plan.color}`,
+                borderRadius: "var(--radius)",
+                cursor: "pointer",
+                color: plan.highlighted ? "#000" : plan.color,
+                fontWeight: 700,
+                fontSize: 13,
+                fontFamily: "var(--font-data)",
+                letterSpacing: "0.06em",
+                transition: "all 0.2s",
+              }}
+            >
+              Get {plan.name} →
+            </button>
+          </div>
+        ))}
       </div>
 
       <p style={{
         fontSize: 11,
         color: "var(--text-muted)",
         textAlign: "center",
-        marginTop: 16,
+        marginTop: 20,
         fontFamily: "var(--font-data)",
       }}>
-        🔒 Secured by Paystack · No hidden fees · Cancel anytime
+        🔒 No hidden fees · Cancel anytime
       </p>
     </div>
   );
