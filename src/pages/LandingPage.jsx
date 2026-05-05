@@ -34,6 +34,21 @@ export default function LandingPage({ onGetStarted }) {
   const [showProof, setShowProof] = useState(true);
   const [timeLeft, setTimeLeft] = useState('02:47:15');
   const [activeFaq, setActiveFaq] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+
+  // Store selected plan and go to auth
+  const handleSelectPlan = (plan) => {
+    setSelectedPlan(plan);
+    localStorage.setItem('selected_plan', plan);
+    Pixel.trackInitiateCheckout(plan);
+    onGetStarted();
+  };
+
+  // Legacy handler for buttons that don't pass plan
+  const handleJoin = () => {
+    Pixel.trackInitiateCheckout('Pro');
+    onGetStarted();
+  };
 
   useEffect(() => {
     // Social Proof Cycle
@@ -62,12 +77,7 @@ export default function LandingPage({ onGetStarted }) {
       clearInterval(proofInterval);
       clearInterval(timerInterval);
     };
-  }, []); // ← Empty array: runs ONCE on mount, never again
-
-  const handleJoin = () => {
-    Pixel.trackInitiateCheckout('Gold Lifetime');
-    onGetStarted();
-  };
+  }, []); 
 
   const currentProof = purchases[proofIndex];
 
@@ -90,7 +100,7 @@ export default function LandingPage({ onGetStarted }) {
         </div>
 
         <div style={S.ctaContainer}>
-          <button style={S.btnPrimary} onClick={handleJoin}>GET LIFETIME ACCESS →</button>
+          <button style={S.btnPrimary} onClick={() => handleSelectPlan('pro')}>GET RISKPILOT PRO</button>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-data)', marginTop: 12 }}>
             TRUSTED BY 1,200+ DISCIPLINED GOLD TRADERS
           </div>
@@ -130,6 +140,22 @@ export default function LandingPage({ onGetStarted }) {
       <section style={S.pricingSection}>
         <h2 style={S.sectionTitle}>Choose Your Plan</h2>
         
+        {/* FREE PLAN */}
+        <div style={{...S.pricingCard, border: '1px solid #444', marginBottom: 20}}>
+          <p style={S.cardBadge}>RISKPILOT FREE</p>
+          <div style={S.priceTag}>
+            <span style={{ fontSize: 24, alignSelf: 'flex-start', marginTop: 10 }}>₦</span>0
+            <span style={{ fontSize: 14, color: 'var(--text-muted)', marginLeft: 8 }}>/ FOREVER</span>
+          </div>
+          <ul style={S.priceFeatures}>
+            <li>✅ Precision XAUUSD Calculator</li>
+            <li>✅ Basic Trade Journal</li>
+            <li>✅ Limited Analytics</li>
+            <li>✅ Get started today - no payment required</li>
+          </ul>
+          <button style={{...S.btnPrimary, background: '#444'}} onClick={() => handleSelectPlan('free')}>START FREE</button>
+        </div>
+        
         {/* PRO PLAN */}
         <div style={S.pricingCard}>
           <div style={S.ribbon}>MOST POPULAR</div>
@@ -146,7 +172,7 @@ export default function LandingPage({ onGetStarted }) {
             <li>✅ Session Insights</li>
             <li>✅ Priority Support</li>
           </ul>
-          <button style={S.btnPrimary} onClick={handleJoin}>GET RISKPILOT PRO</button>
+          <button style={S.btnPrimary} onClick={() => handleSelectPlan('pro')}>GET RISKPILOT PRO</button>
         </div>
 
         {/* PRO PLUS PLAN */}
@@ -163,7 +189,7 @@ export default function LandingPage({ onGetStarted }) {
             <li>✅ Advanced Risk Tools</li>
             <li>✅ Custom Alerts</li>
           </ul>
-          <button style={{...S.btnPrimary, background: '#7B6FF0'}} onClick={handleJoin}>GET PRO+</button>
+          <button style={{...S.btnPrimary, background: '#7B6FF0'}} onClick={() => handleSelectPlan('pro_plus')}>GET PRO+</button>
         </div>
 
         {/* ELITE PLAN */}
@@ -180,7 +206,7 @@ export default function LandingPage({ onGetStarted }) {
             <li>✅ Team Collaboration</li>
             <li>✅ Dedicated Support</li>
           </ul>
-          <button style={{...S.btnPrimary, background: '#E05C5C'}} onClick={handleJoin}>GET ELITE</button>
+          <button style={{...S.btnPrimary, background: '#E05C5C'}} onClick={() => handleSelectPlan('elite')}>GET ELITE</button>
         </div>
         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 16, textAlign: 'center' }}>Secure payment via Paystack • Cancel anytime</p>
       </section>

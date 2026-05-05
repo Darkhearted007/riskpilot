@@ -141,7 +141,17 @@ export default function App() {
   /* ================= PUBLIC ROUTES ================= */
   if (!user) {
     if (view === "auth")
-      return <AuthScreen onAuth={(u) => { setUser(u); fetchProfile(u.id); }} />;
+      return <AuthScreen onAuth={(u) => { 
+        setUser(u); 
+        fetchProfile(u.id);
+        // Check if user selected a plan before registering
+        const selectedPlan = localStorage.getItem('selected_plan');
+        if (selectedPlan && selectedPlan !== 'free') {
+          // Show upgrade modal after registration
+          setTimeout(() => setShowUpgrade(true), 500);
+          localStorage.removeItem('selected_plan');
+        }
+      }} />;
 
     if (view === "affiliate")
       return <Affiliate onBack={() => setView("landing")} />;

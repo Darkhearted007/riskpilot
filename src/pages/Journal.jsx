@@ -126,13 +126,19 @@ function TradeCard({ trade, onRefresh }) {
    JOURNAL
 ========================= */
 export default function Journal({ user }) {
-  // Remove subscription gating - show to all users
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   /* ---------------- FETCH ---------------- */
   const fetchTrades = useCallback(async () => {
+    // Guard: require user
+    if (!user?.id) {
+      setError("Please log in to view your trades");
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError("");
 
@@ -143,13 +149,14 @@ export default function Journal({ user }) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      setError("Failed to load trades");
+      console.error("[Journal] Fetch error:", error);
+      setError("Failed to load trades: " + error.message);
     } else {
       setTrades(data || []);
     }
 
     setLoading(false);
-  }, [user.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchTrades();
