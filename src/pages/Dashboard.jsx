@@ -81,17 +81,31 @@ export default function Dashboard({ user, isGold }) {
   const [sharing,   setSharing]   = useState(false);
   const [shared,    setShared]    = useState(false);
 
+  // Ensure user exists
+  const userId = user?.id;
+  
+  if (!userId) {
+    console.warn('[Dashboard] No user ID provided');
+  }
+
   const fetchTrades = useCallback(async (isRefresh = false) => {
     if (isRefresh) setLoading(true);
     setError('');
     
-    console.log('[Dashboard] Fetching trades for user:', user?.id);
+    // Guard: no user
+    if (!userId) {
+      setError('Please log in to view your trades');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('[Dashboard] Fetching trades for user:', userId);
     
     try {
       const { data, error: fetchError } = await supabase
         .from('trades')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -111,11 +125,13 @@ export default function Dashboard({ user, isGold }) {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
-    fetchTrades();
-  }, [fetchTrades]);
+    if (userId) {
+      fetchTrades();
+    }
+  }, [fetchTrades, userId]);
 
   const disciplineData = calculateDisciplineScore(trades);
   

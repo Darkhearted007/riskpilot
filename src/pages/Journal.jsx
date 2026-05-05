@@ -126,13 +126,10 @@ function TradeCard({ trade, onRefresh }) {
    JOURNAL
 ========================= */
 export default function Journal({ user }) {
-  const { isProPlus, isElite } = useAuth();
-
+  // Remove subscription gating - show to all users
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const canViewHistory = isProPlus || isElite;
 
   /* ---------------- FETCH ---------------- */
   const fetchTrades = useCallback(async () => {
@@ -182,36 +179,8 @@ export default function Journal({ user }) {
 
           {/* CLOSED TRADES */}
           <h4 style={{ marginTop: 20 }}>History</h4>
-
-          {!canViewHistory ? (
-            <div
-              style={{
-                padding: 20,
-                border: "1px dashed gold",
-                textAlign: "center",
-                borderRadius: 10,
-              }}
-            >
-              <p>🔒 History Locked</p>
-              <p style={{ fontSize: 12 }}>
-                Upgrade to Pro+ to unlock full journal history
-              </p>
-
-              <button
-                onClick={() =>
-                  window.dispatchEvent(new Event("open-upgrade"))
-                }
-                style={{
-                  marginTop: 10,
-                  padding: "8px 12px",
-                  background: "gold",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Upgrade
-              </button>
-            </div>
+          {closedTrades.length === 0 ? (
+            <p style={{ color: '#666', fontSize: 13 }}>No closed trades yet</p>
           ) : (
             closedTrades.map((t) => (
               <TradeCard key={t.id} trade={t} onRefresh={fetchTrades} />

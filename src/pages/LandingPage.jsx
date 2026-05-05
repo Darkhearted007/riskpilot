@@ -19,7 +19,8 @@ const FEATURES = [
 
 const FAQS = [
   { q: 'Is this a trading bot?', a: 'No. RiskPilot is a professional discipline utility. It calculates your risk so YOU can execute with confidence, but it does not place trades for you.' },
-  { q: 'Why $47 for a lifetime?', a: 'This is a limited launch offer to build our initial community of disciplined traders. The price will transition to a monthly subscription soon.' },
+  { q: 'How does the subscription work?', a: 'RiskPilot Pro is ₦5,000/month. Subscriptions renew automatically each month and can be cancelled anytime. You keep access until your paid period ends.' },
+  { q: 'Can I cancel anytime?', a: 'Yes! You can cancel your subscription anytime from your account settings. You will keep access until your paid period ends.' },
   { q: 'Does it work on mobile?', a: 'Yes. RiskPilot is fully responsive and can be installed as a PWA on iOS and Android for instant access on your home screen.' },
   { q: 'Is my data secure?', a: 'We use Supabase for enterprise-grade security. Your trade data is private, encrypted, and only accessible by you.' },
 ];
@@ -127,23 +128,61 @@ export default function LandingPage({ onGetStarted }) {
 
       {/* PRICING SECTION */}
       <section style={S.pricingSection}>
+        <h2 style={S.sectionTitle}>Choose Your Plan</h2>
+        
+        {/* PRO PLAN */}
         <div style={S.pricingCard}>
-          <div style={S.ribbon}>BEST VALUE</div>
-          <p style={S.cardBadge}>GOLD EDITION</p>
+          <div style={S.ribbon}>MOST POPULAR</div>
+          <p style={S.cardBadge}>RISKPILOT PRO</p>
           <div style={S.priceTag}>
-            <span style={{ fontSize: 24, alignSelf: 'flex-start', marginTop: 10 }}>$</span>47
-            <span style={{ fontSize: 14, color: 'var(--text-muted)', marginLeft: 8 }}>/ LIFETIME</span>
+            <span style={{ fontSize: 24, alignSelf: 'flex-start', marginTop: 10 }}>₦</span>5,000
+            <span style={{ fontSize: 14, color: 'var(--text-muted)', marginLeft: 8 }}>/ MONTH</span>
           </div>
           <ul style={S.priceFeatures}>
             <li>✅ Precision XAUUSD Calculator</li>
-            <li>✅ Unlimited Trade Journaling</li>
-            <li>✅ Advanced Performance Dashboard</li>
-            <li>✅ Session-Specific Analytics</li>
-            <li>✅ Lifetime Updates & Support</li>
+            <li>✅ Unlimited Active Trades</li>
+            <li>✅ Full Trade Journal</li>
+            <li>✅ Advanced Analytics</li>
+            <li>✅ Session Insights</li>
+            <li>✅ Priority Support</li>
           </ul>
-          <button style={S.btnPrimary} onClick={handleJoin}>START SCALING NOW</button>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 16 }}>Secure payment via Paystack</p>
+          <button style={S.btnPrimary} onClick={handleJoin}>GET RISKPILOT PRO</button>
         </div>
+
+        {/* PRO PLUS PLAN */}
+        <div style={{...S.pricingCard, border: '1px solid #7B6FF0', marginTop: 16}}>
+          <p style={{...S.cardBadge, color: '#7B6FF0'}}>RISKPILOT PRO+</p>
+          <div style={S.priceTag}>
+            <span style={{ fontSize: 24, alignSelf: 'flex-start', marginTop: 10 }}>₦</span>15,000
+            <span style={{ fontSize: 14, color: 'var(--text-muted)', marginLeft: 8 }}>/ MONTH</span>
+          </div>
+          <ul style={S.priceFeatures}>
+            <li>✅ Everything in Pro</li>
+            <li>✅ XAUUSD + XAG Trading</li>
+            <li>✅ Trade Signals Access</li>
+            <li>✅ Advanced Risk Tools</li>
+            <li>✅ Custom Alerts</li>
+          </ul>
+          <button style={{...S.btnPrimary, background: '#7B6FF0'}} onClick={handleJoin}>GET PRO+</button>
+        </div>
+
+        {/* ELITE PLAN */}
+        <div style={{...S.pricingCard, border: '1px solid #E05C5C', marginTop: 16}}>
+          <p style={{...S.cardBadge, color: '#E05C5C'}}>RISKPILOT ELITE</p>
+          <div style={S.priceTag}>
+            <span style={{ fontSize: 24, alignSelf: 'flex-start', marginTop: 10 }}>₦</span>30,000
+            <span style={{ fontSize: 14, color: 'var(--text-muted)', marginLeft: 8 }}>/ MONTH</span>
+          </div>
+          <ul style={S.priceFeatures}>
+            <li>✅ Everything in Pro+</li>
+            <li>✅ All Forex Pairs</li>
+            <li>✅ API Access</li>
+            <li>✅ Team Collaboration</li>
+            <li>✅ Dedicated Support</li>
+          </ul>
+          <button style={{...S.btnPrimary, background: '#E05C5C'}} onClick={handleJoin}>GET ELITE</button>
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 16, textAlign: 'center' }}>Secure payment via Paystack • Cancel anytime</p>
       </section>
 
       {/* FAQ SECTION */}
