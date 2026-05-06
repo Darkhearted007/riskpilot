@@ -6,7 +6,7 @@ const PLANS = [
     name: "RiskPilot Pro",
     price: "₦5,000",
     period: "/month",
-    url: "https://paystack.shop/pay/YOUR_PRO_LINK",
+    url: import.meta.env.VITE_PAYSTACK_PRO_LINK || "https://paystack.shop/pay/riskpilot-pro",
     plan: "pro",
     color: "#D4AF37",
     features: [
@@ -22,7 +22,7 @@ const PLANS = [
     name: "RiskPilot Pro-Plus",
     price: "₦15,000",
     period: "/month",
-    url: "https://paystack.shop/pay/YOUR_PRO_PLUS_LINK",
+    url: import.meta.env.VITE_PAYSTACK_PRO_PLUS_LINK || "https://paystack.shop/pay/riskpilot-pro-plus",
     plan: "pro_plus",
     color: "#7B6FF0",
     features: [
@@ -38,7 +38,7 @@ const PLANS = [
     name: "RiskPilot Elite",
     price: "₦30,000",
     period: "/month",
-    url: "https://paystack.shop/pay/YOUR_ELITE_LINK",
+    url: import.meta.env.VITE_PAYSTACK_ELITE_LINK || "https://paystack.shop/pay/riskpilot-elite",
     plan: "elite",
     color: "#E05C5C",
     features: [

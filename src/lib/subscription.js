@@ -21,10 +21,10 @@ export const PLANS = {
   pro: {
     id: 'pro',
     name: 'RiskPilot Pro',
-    price: 15000,
-    priceDisplay: '₦15,000',
+    price: 5000,
+    priceDisplay: '₦5,000',
     priceSymbol: '₦',
-    pricePeriod: 'lifetime',
+    pricePeriod: 'monthly',
     features: [
       'Precision XAUUSD Calculator',
       'Unlimited Active Trades',
@@ -44,10 +44,10 @@ export const PLANS = {
   pro_plus: {
     id: 'pro_plus',
     name: 'RiskPilot Pro-Plus',
-    price: 35000,
-    priceDisplay: '₦35,000',
+    price: 15000,
+    priceDisplay: '₦15,000',
     priceSymbol: '₦',
-    pricePeriod: 'lifetime',
+    pricePeriod: 'monthly',
     features: [
       'Everything in RiskPilot Pro',
       'XAUUSD + XAG (Silver)',
@@ -112,9 +112,9 @@ export function getPlanLimit(planId, limitKey) {
 }
 
 export const SUBSCRIPTION_AMOUNTS = {
-  pro: 1500000,
-  pro_plus: 3500000,
-  elite: 7500000,
+  pro: 500000,
+  pro_plus: 1500000,
+  elite: 3000000,
 };
 
 export function getAmountForPlan(planId) {

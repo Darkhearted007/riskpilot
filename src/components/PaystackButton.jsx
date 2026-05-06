@@ -14,7 +14,7 @@ export default function PaystackButton({ user, onSuccess }) {
     }
 
     const handler = window.PaystackPop.setup({
-      key: 'pk_test_f84800b3cfc6b0a2fd8fb5e24bfc09c9aee3246d',
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_f84800b3cfc6b0a2fd8fb5e24bfc09c9aee3246d',
       email: user.email,
       amount: 4700, // $47.00
       currency: 'USD',
