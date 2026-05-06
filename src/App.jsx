@@ -202,7 +202,7 @@ export default function App() {
       <main style={{ paddingBottom: 80 }}>
         {tab === "calc" && (
           <ErrorBoundary>
-            <Calculator user={user} isPro={isPro} />
+            <Calculator user={user} isGold={isPro} onUpgrade={() => setShowUpgrade(true)} />
           </ErrorBoundary>
         )}
 
