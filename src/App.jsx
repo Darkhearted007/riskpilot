@@ -222,28 +222,68 @@ export default function App() {
       <TabBar active={tab} setActive={setTab} />
 
       {/* ================= UPGRADE MODAL ================= */}
-      {showUpgrade && (
+{showUpgrade && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.8)",
+            background: "rgba(8,11,15,0.92)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            zIndex: 1000,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
+            alignItems: "flex-end",
+            justifyContent: "center",
+            padding: 0,
           }}
           onClick={() => setShowUpgrade(false)}
         >
           <div
             style={{
-              background: "#111",
-              padding: 32,
-              borderRadius: 12,
-              width: 400
+              background: "var(--bg-1)",
+              border: "1px solid var(--border-gold)",
+              borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
+              width: "100%",
+              maxWidth: 520,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              padding: "0 0 32px",
+              position: "relative",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2>Upgrade Your Plan</h2>
+            {/* Handle bar */}
+            <div style={{
+              width: 40,
+              height: 4,
+              background: "var(--border-high)",
+              borderRadius: 99,
+              margin: "12px auto 0",
+            }} />
+
+            {/* Close button */}
+            <button
+              onClick={() => setShowUpgrade(false)}
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 16,
+                background: "var(--surface-high)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-sm)",
+                color: "var(--text-muted)",
+                fontSize: 16,
+                width: 32,
+                height: 32,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              ×
+            </button>
+
             <UpgradePlans />
           </div>
         </div>

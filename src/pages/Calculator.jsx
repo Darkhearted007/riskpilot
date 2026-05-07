@@ -13,6 +13,11 @@ import { supabase }           from '../lib/supabaseClient';
 import { calculateGoldLotSize, getTradeWarnings, XAUUSD_POINT, XAUUSD_PIP_VALUE } from '../lib/riskEngine';
 import { getSessionInfo }     from '../lib/sessionDetector';
 import RiskAlert              from '../components/RiskAlert';
+import { RRRDisplay }         from '../components/calculator/RRRDisplay';
+import { BreakEvenDisplay }   from '../components/calculator/BreakEvenDisplay';
+import { DisciplineMeter }    from '../components/calculator/DisciplineMeter';
+import { calculateRRR, calculateBreakEven, pipDistance } from '../lib/calculations';
+import { calculateDisciplineScore } from '../lib/discipline';
 
 // ── Constants ─────────────────────────────────────────────────
 const LEVEL_STYLE = {
@@ -170,7 +175,6 @@ function RRRBar({ rrr, slPips, tpPips }) {
   const total  = slPips + tpPips;
   const slPct  = (slPips / total) * 100;
   const tpPct  = (tpPips / total) * 100;
-
   return (
     <div style={{ marginTop:4 }}>
       <div style={{ display:'flex', height:8, borderRadius:6, overflow:'hidden', gap:2 }}>
@@ -195,8 +199,7 @@ export default function Calculator({ user, isGold, onUpgrade }) {
   const [setupType, setSetupType] = useState('Retest');
   const [emotion,   setEmotion]   = useState('Calm');
   const [notes,     setNotes]     = useState('');
-
-  const [session,  setSession]  = useState(null);
+  const [session,   setSession]   = useState(null);
 
   const { result, warnings, derived } = useMemo(() => {
     const b    = parseFloat(balance);
@@ -214,12 +217,10 @@ export default function Calculator({ user, isGold, onUpgrade }) {
       const slPips = priceToPips(slDist);
       const tpPips = tpP > 0 && tpValid ? priceToPips(Math.abs(tpP - entP)) : 0;
       const rrr    = tpPips > 0 ? tpPips / slPips : 0;
-
       const calcResult = calculateGoldLotSize(b, r, slPips);
       const traps      = getTradeWarnings(r, slPips);
-      const riskAmt   = b * (r / 100);
-      const potProfit = tpPips > 0 ? riskAmt * rrr : 0;
-
+      const riskAmt    = b * (r / 100);
+      const potProfit  = tpPips > 0 ? riskAmt * rrr : 0;
       return {
         result: calcResult,
         warnings: traps,
@@ -268,15 +269,27 @@ export default function Calculator({ user, isGold, onUpgrade }) {
       setup_type:        setupType,
       emotion:           emotion,
       notes:             notes.trim() || null,
-      status:            'open'
+      status:            'open',
+      rrr:               derived?.rrr ?? null,
+      discipline_score:  derived?.rrr ? calculateDisciplineScore(derived.rrr, pipDistance(entry, sl)).score : null,
     });
     if (error) { setSaveError('Failed to save. Try again.'); }
     else { setSaved(true); setTimeout(() => setSaved(false), 3000); }
     setSaving(false);
-  }, [user.id, balance, riskPct, session, result, notes, direction, entry, sl, tp, setupType, emotion, saving]);
+  }, [user.id, balance, riskPct, session, result, notes, direction, entry, sl, tp, setupType, emotion, saving, derived]);
 
-  const levelStyle = result ? LEVEL_STYLE[result.riskLevel] : null;
-  const riskAmount = balance && riskPct ? parseFloat(balance) * (parseFloat(riskPct)/100) : 0;
+  const levelStyle  = result ? LEVEL_STYLE[result.riskLevel] : null;
+  const riskAmount  = balance && riskPct ? parseFloat(balance) * (parseFloat(riskPct)/100) : 0;
+
+  // ── New discipline + RRR values ───────────────────────────
+  const rrr        = calculateRRR(entry, sl, tp, direction);
+  const breakEven  = calculateBreakEven(rrr);
+  const slDist     = pipDistance(entry, sl);
+  const disc       = rrr != null
+    ? calculateDisciplineScore(rrr, slDist)
+    : { score: null, rating: null, breakdown: null };
+
+  const showAnalysis = entry || sl || tp;
 
   return (
     <div style={S.page} className="fade-up">
@@ -286,9 +299,9 @@ export default function Calculator({ user, isGold, onUpgrade }) {
           <span style={{ fontSize:20 }}>🚀</span>
           <div style={{ flex:1 }}>
             <p style={{ fontSize:11, fontWeight:700, color:'var(--gold)', fontFamily:'var(--font-data)' }}>SCALE YOUR SUCCESS</p>
-            <p style={{ fontSize:10, color:'var(--text-sub)' }}>Upgrade to Gold to unlock precision equity tracking and full trade history.</p>
+            <p style={{ fontSize:10, color:'var(--text-sub)' }}>Upgrade to unlock precision equity tracking and full trade history.</p>
           </div>
-          <button 
+          <button
             onClick={onUpgrade}
             style={{ background:'var(--gold)', border:'none', borderRadius:'var(--radius-sm)', padding:'6px 12px', color:'#000', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'var(--font-data)' }}
           >
@@ -335,7 +348,6 @@ export default function Calculator({ user, isGold, onUpgrade }) {
           <PriceInput label="Stop Loss" value={sl} onChange={setSl} placeholder="2630.00" accent="var(--red)" />
           <PriceInput label="Take Profit" value={tp} onChange={setTp} placeholder="2690.00" accent="var(--green)" />
         </div>
-        
         {derived?.slError && (
           <div style={{ marginTop:10, padding:'10px 12px', background:'var(--red-dim)', border:'1px solid rgba(255,61,87,0.3)', borderRadius:'var(--radius)', fontSize:12, color:'var(--red)', fontWeight:500 }}>
             ⚠ Invalid SL for {direction}
@@ -368,19 +380,31 @@ export default function Calculator({ user, isGold, onUpgrade }) {
           <p style={{ fontSize:15, fontWeight:600, color:'var(--text-sub)' }}>Enter trade parameters</p>
         </div>
       )}
+
+      {/* ── RRR · Break-even · Discipline ── */}
+      {showAnalysis && (
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          <div style={S.card}>
+            <RRRDisplay rrr={rrr} />
+          </div>
+          <BreakEvenDisplay rrr={rrr} breakEven={breakEven} />
+          <DisciplineMeter score={disc.score} rating={disc.rating} breakdown={disc.breakdown} />
+        </div>
+      )}
+
     </div>
   );
 }
 
 const S = {
-  page: { padding:'16px 16px 110px', display:'flex', flexDirection:'column', gap:14, maxWidth:520, margin:'0 auto' },
-  topBar: { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border-gold)' },
-  pair: { display:'flex', flexDirection:'column', gap:2 },
-  pairName: { fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:'var(--gold)' },
-  pairSub:  { fontFamily:'var(--font-data)', fontSize:10, color:'var(--text-muted)' },
+  page:        { padding:'16px 16px 110px', display:'flex', flexDirection:'column', gap:14, maxWidth:520, margin:'0 auto' },
+  topBar:      { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border-gold)' },
+  pair:        { display:'flex', flexDirection:'column', gap:2 },
+  pairName:    { fontFamily:'var(--font-display)', fontSize:20, fontWeight:700, color:'var(--gold)' },
+  pairSub:     { fontFamily:'var(--font-data)', fontSize:10, color:'var(--text-muted)' },
   sessionChip: { display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:'var(--radius)', border:'1px solid', background:'var(--surface-high)' },
-  card: { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'16px' },
-  cardLabel: { fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.14em', marginBottom:14 },
-  resultCard: { borderRadius:'var(--radius-lg)', border:'1px solid', padding:'16px' },
-  emptyState: { display:'flex', flexDirection:'column', alignItems:'center', padding:'36px 20px', background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)' },
+  card:        { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius-lg)', padding:'16px' },
+  cardLabel:   { fontFamily:'var(--font-data)', fontSize:10, fontWeight:600, color:'var(--text-muted)', letterSpacing:'0.14em', marginBottom:14 },
+  resultCard:  { borderRadius:'var(--radius-lg)', border:'1px solid', padding:'16px' },
+  emptyState:  { display:'flex', flexDirection:'column', alignItems:'center', padding:'36px 20px', background:'var(--surface)', borderRadius:'var(--radius-lg)', border:'1px solid var(--border)' },
 };

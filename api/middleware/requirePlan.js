@@ -12,6 +12,12 @@ export function requirePlan(plan) {
     if (rank[userPlan] < rank[plan]) {
       return res.status(403).json({
         error: "Upgrade required",
+        required: plan,
+        current: userPlan,
+        rank: {
+          required: rank[plan],
+          current: rank[userPlan],
+        },
       });
     }
 

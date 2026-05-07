@@ -119,6 +119,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 .stagger > *:nth-child(4) { animation-delay: 0.2s;  opacity: 0; animation-fill-mode: forwards; animation-name: fadeUp; animation-duration: 0.4s; animation-timing-function: cubic-bezier(0.16,1,0.3,1); }
 
 /* Tab Bar */
+/* Tab Bar */
 .tab-bar {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -126,12 +127,13 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
   border-top: 1px solid var(--border);
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 9999;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
   max-width: var(--mobile-width);
-  margin: 0 auto;
+  z-index: 9999;
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 @media (min-width: 768px) {
@@ -150,19 +152,19 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4;
+  gap: 4px;
   font-family: var(--font-body);
   color: var(--text-sub);
   transition: all 0.2s;
 }
 
 .tab-btn span:first-child {
-  font-size: 16;
+  font-size: 18px;
   line-height: 1;
 }
 
 .tab-btn span:last-child {
-  font-size: 10;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
 }
