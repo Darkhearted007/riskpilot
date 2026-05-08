@@ -17,15 +17,14 @@ function resolveTag(row) {
 
 function transformTrade(row, index, allRows) {
   const date       = new Date(row.created_at);
-  const pnlPct     = Number(row.pnl_amount)      || 0;
-  const rrr        = Number(row.rrr)              || 0;
-  const riskPct    = Number(row.risk_percentage)  || 1;
-  const discipline = Number(row.discipline_score) || 75;
+  const pnlPct     = Number(row.pnl_amount)     || 0;
+  const rrr        = Number(row.rrr)             || 0;
+  const riskPct    = Number(row.risk_percentage) || 1;
+  const discipline = Number(row.discipline_score)|| 75;
   const win = row.is_win === true ||
               row.is_win === "true" ||
               String(row.result || "").toUpperCase() === "WIN";
 
-  // Compound equity: start * product of (1 + pnl%/100) per trade
   let equity = Number(allRows[0].balance) || 1000;
   for (let i = 0; i <= index; i++) {
     equity *= 1 + (Number(allRows[i].pnl_amount) || 0) / 100;
@@ -68,6 +67,13 @@ export function useAnalytics(range = "ALL") {
     setLoading(true);
     setError(null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setTrades([]);
+        setLoading(false);
+        return;
+      }
+
       let query = supabase
         .from("trades")
         .select(`
@@ -77,6 +83,7 @@ export function useAnalytics(range = "ALL") {
           setup_type, emotion, notes, status, is_win,
           pnl_amount, pair, rrr, discipline_score, result
         `)
+        .eq("user_id", session.user.id)
         .order("created_at", { ascending: true });
 
       const startDate = getStartDate(range);
@@ -98,9 +105,20 @@ export function useAnalytics(range = "ALL") {
   useEffect(() => { fetchTrades(); }, [fetchTrades]);
 
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event) => {
+        if (event === "SIGNED_IN") fetchTrades();
+        if (event === "SIGNED_OUT") setTrades([]);
+      }
+    );
+    return () => subscription.unsubscribe();
+  }, [fetchTrades]);
+
+  useEffect(() => {
     const channel = supabase
       .channel("riskpilot-analytics-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "trades" }, () => fetchTrades())
+      .on("postgres_changes", { event: "*", schema: "public", table: "trades" },
+        () => fetchTrades())
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [fetchTrades]);

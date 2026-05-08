@@ -257,7 +257,7 @@ export default function Calculator({ user, isGold, onUpgrade }) {
     const { error } = await supabase.from('trades').insert({
       user_id:           user.id,
       balance:           parseFloat(balance),
-      risk_percent:      parseFloat(riskPct),
+      risk_percentage:      parseFloat(riskPct),
       lot_size:          result.lotSize,
       risk_amount:       result.riskAmount,
       risk_level:        result.riskLevel,
