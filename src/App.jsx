@@ -6,6 +6,7 @@ import Privacy from "./pages/Privacy";
 import Calculator from "./pages/Calculator";
 import Journal from "./pages/Journal";
 import Dashboard from "./pages/Dashboard";
+import Analytics from "./pages/Analytics";
 import LandingPage from "./pages/LandingPage";
 import Affiliate from "./pages/Affiliate";
 import AuthScreen from "./components/AuthScreen";
@@ -214,6 +215,12 @@ export default function App() {
 
         {tab === "dashboard" && (
           <ErrorBoundary>
+
+        {tab === "analytics" && (
+          <ErrorBoundary>
+            <Analytics user={user} />
+          </ErrorBoundary>
+        )}
             <Dashboard user={user} isElite={isElite} />
           </ErrorBoundary>
         )}

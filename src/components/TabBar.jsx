@@ -1,16 +1,18 @@
 export default function TabBar({ active, setActive }) {
   const tabs = [
-    { id: 'calc',      icon: '◈', label: 'Calculator' },
-    { id: 'journal',   icon: '📝', label: 'Journal' },
-    { id: 'dashboard', icon: '▦', label: 'Dashboard' },
+    { id: 'calc',      icon: '◈',  label: 'Calculator' },
+    { id: 'journal',   icon: '📝', label: 'Journal'    },
+    { id: 'dashboard', icon: '▦',  label: 'Dashboard'  },
+    { id: 'analytics', icon: '📊', label: 'Analytics'  },
   ];
+  const idx = tabs.findIndex(t => t.id === active);
   return (
     <nav className="tab-bar">
       <div className="tab-indicator" style={{
         position: 'absolute',
         top: 0,
-        left: active === 'calc' ? '0%' : active === 'journal' ? '33.33%' : '66.66%',
-        width: '33.33%',
+        left: `${(idx < 0 ? 0 : idx) * 25}%`,
+        width: '25%',
         height: 2,
         background: 'var(--gold)',
         boxShadow: '0 0 12px var(--gold)',
