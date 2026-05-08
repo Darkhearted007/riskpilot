@@ -17,7 +17,7 @@ function resolveTag(row) {
 
 function transformTrade(row, index, allRows) {
   const date       = new Date(row.created_at);
-  const pnl        = Number(row.pnl_amount)      || 0;
+  const pnlPct     = Number(row.pnl_amount)      || 0;
   const rrr        = Number(row.rrr)              || 0;
   const riskPct    = Number(row.risk_percentage)  || 1;
   const discipline = Number(row.discipline_score) || 75;
@@ -25,28 +25,29 @@ function transformTrade(row, index, allRows) {
               row.is_win === "true" ||
               String(row.result || "").toUpperCase() === "WIN";
 
+  // Compound equity: start * product of (1 + pnl%/100) per trade
   let equity = Number(allRows[0].balance) || 1000;
   for (let i = 0; i <= index; i++) {
-    equity += Number(allRows[i].pnl_amount) || 0;
+    equity *= 1 + (Number(allRows[i].pnl_amount) || 0) / 100;
   }
 
   return {
     id:         row.id,
     date:       date.toISOString().slice(0, 10),
     day:        DAYS[date.getDay()],
-    session:    row.session     || "London",
+    session:    row.session    || "London",
     tag:        resolveTag(row),
-    pair:       row.pair        || "XAUUSD",
-    direction:  row.direction   || "BUY",
+    pair:       row.pair       || "XAUUSD",
+    direction:  row.direction  || "BUY",
     rrr:        +rrr.toFixed(2),
     risk:       +riskPct.toFixed(2),
-    pnl:        +pnl.toFixed(2),
+    pnl:        +pnlPct.toFixed(2),
     equity:     +equity.toFixed(2),
     win,
     discipline: +discipline.toFixed(0),
-    riskLevel:  row.risk_level  || "medium",
+    riskLevel:  row.risk_level || "medium",
     lotSize:    Number(row.lot_size) || 0,
-    notes:      row.notes       || "",
+    notes:      row.notes      || "",
   };
 }
 
