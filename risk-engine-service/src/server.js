@@ -1,269 +1,226 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import websocket from "@fastify/websocket";
 import dotenv from "dotenv";
-
-// ===============================
-// AI ENGINES
-// ===============================
-import { analyzeLiveBehavior } from "./engines/liveEngine.js";
-import { evaluateTradeGuard } from "./engines/guardEngine.js";
-import { generateRiskCoaching } from "./engines/coachEngine.js";
-import { detectTraderEmotion } from "./engines/emotionEngine.js";
-
-// ===============================
-// ADMIN STATE (IN-MEMORY)
-// ===============================
-import {
-  upsertTrader,
-  removeTrader,
-  getAllTraders,
-  getTrader,
-} from "./state/traderRegistry.js";
-
-// ===============================
-// DATABASE (SUPABASE)
-// ===============================
-import { db } from "./lib/db.js";
+import http from "http";
+import { WebSocketServer } from "ws";
 
 import riskRoutes from "./routes/riskRoutes.js";
+import { analyzeLiveBehavior } from "./engines/liveEngine.js";
+import {
+  getMarketSession,
+  getVolatilityAdjustment,
+} from "./engines/contextEngine.js";
 
 dotenv.config();
 
-// ===============================
-// INIT
-// ===============================
-const app = Fastify({ logger: true });
+/* ===============================
+   FASTIFY INIT
+================================ */
+const app = Fastify({
+  logger: true,
+});
 
-// ===============================
-// PLUGINS
-// ===============================
-await app.register(cors, { origin: "*" });
-await app.register(websocket);
+/* ===============================
+   SAFETY HOOKS
+================================ */
+process.on("unhandledRejection", (err) => {
+  console.log("⚠️ UNHANDLED REJECTION:", err);
+});
 
-// ===============================
-// REST ROUTES
-// ===============================
+process.on("uncaughtException", (err) => {
+  console.log("⚠️ UNCAUGHT EXCEPTION:", err);
+});
+
+/* ===============================
+   PLUGINS
+================================ */
+await app.register(cors, {
+  origin: "*",
+});
+
+/* ===============================
+   ROUTES
+================================ */
 app.register(riskRoutes, {
   prefix: "/api/risk",
 });
 
-// ===============================
-// HEALTH CHECK
-// ===============================
+/* ===============================
+   HEALTH CHECK
+================================ */
 app.get("/", async () => {
   return {
     service: "RiskPilot Risk Engine",
     status: "online",
-    version: "3.0-institutional-ai",
-    features: [
-      "behavior-engine",
-      "emotion-engine",
-      "trade-guard",
-      "ai-coach",
-      "admin-control-room",
-      "supabase-persistence",
-    ],
+    version: "v2-context-clean",
     timestamp: new Date().toISOString(),
   };
 });
 
-// ===============================
-// ADMIN API
-// ===============================
-app.get("/admin/traders", async () => {
-  const traders = getAllTraders();
+/* ===============================
+   CORE AI ENGINE (CLEAN v2 FUSION)
+================================ */
+function safeAnalyze(input) {
+  try {
+    const base = analyzeLiveBehavior(input);
 
-  return {
-    total: traders.length,
-    traders,
-    timestamp: new Date().toISOString(),
-  };
+    const context = getMarketSession();
+    const vol = getVolatilityAdjustment(context.volatility, input);
+
+    const rawScore =
+      (base.score || 50) * context.bias * vol.multiplier;
+
+    const adjustedScore = Math.min(100, Math.max(0, rawScore));
+
+    /* -------------------------------
+       CLEAN ALERT SYSTEM (NO DUPLICATES)
+    -------------------------------- */
+    const alerts = [];
+
+    // only keep non-session alerts from base engine
+    if (Array.isArray(base.alerts)) {
+      for (const a of base.alerts) {
+        const lower = a.toLowerCase();
+        if (!lower.includes("session")) {
+          alerts.push(a);
+        }
+      }
+    }
+
+    // inject structured intelligence ONLY once
+    alerts.push(`Session: ${context.session}`);
+    alerts.push(vol.note);
+
+    return {
+      score: Math.round(adjustedScore),
+      state: base.state || "STABLE",
+      alerts,
+      context: {
+        session: context.session,
+        volatility: context.volatility,
+      },
+    };
+  } catch (err) {
+    console.log("⚠️ ENGINE FALLBACK:", err.message);
+
+    return {
+      score: 50,
+      state: "STABLE",
+      alerts: ["fallback mode active"],
+      context: {
+        session: "UNKNOWN",
+        volatility: "UNKNOWN",
+      },
+    };
+  }
+}
+
+/* ===============================
+   HTTP SERVER WRAPPER
+================================ */
+const server = http.createServer(app.server);
+
+/* ===============================
+   WEBSOCKET SERVER
+================================ */
+const wss = new WebSocketServer({
+  server,
+  path: "/ws",
 });
 
-app.get("/admin/traders/:id", async (req) => {
-  return {
-    trader: getTrader(req.params.id),
-    timestamp: new Date().toISOString(),
-  };
-});
+/* ===============================
+   CONNECTION HANDLER
+================================ */
+wss.on("connection", (socket) => {
+  console.log("🔌 WS CONNECTED");
 
-// ===============================
-// WEBSOCKET CONTROL ROOM
-// ===============================
-app.get("/ws", { websocket: true }, (connection, req) => {
-  const traderId =
-    req.headers["x-trader-id"] ||
-    `trader_${Math.random().toString(36).slice(2, 10)}`;
+  socket.isAlive = true;
 
-  console.log(`🔌 Trader connected: ${traderId}`);
-
-  // ===============================
-  // REGISTER TRADER
-  // ===============================
-  upsertTrader(traderId, {
-    connected: true,
-    connectedAt: new Date().toISOString(),
+  /* -------------------------------
+     HEARTBEAT
+  -------------------------------- */
+  socket.on("pong", () => {
+    socket.isAlive = true;
   });
 
-  // ===============================
-  // MESSAGE HANDLER
-  // ===============================
-  connection.socket.on("message", async (message) => {
+  const heartbeat = setInterval(() => {
+    if (!socket.isAlive) {
+      console.log("💀 DEAD SOCKET");
+      return socket.terminate();
+    }
+
+    socket.isAlive = false;
+    socket.ping();
+  }, 20000);
+
+  /* -------------------------------
+     MESSAGE FLOW
+  -------------------------------- */
+  socket.on("message", (msg) => {
     try {
-      const data = JSON.parse(message.toString());
+      const raw = msg.toString();
 
-      // =========================
-      // 1. BEHAVIOR ENGINE
-      // =========================
-      const behavior = analyzeLiveBehavior(data);
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { type: "trade" };
+      }
 
-      // =========================
-      // 2. GUARD ENGINE
-      // =========================
-      const guard = evaluateTradeGuard({
-        score: behavior.score,
-        state: behavior.state,
-        data,
-      });
+      const payload = {
+        type: data.type || "trade",
+        direction: data.direction || "BUY",
+        lot_size: Number(data.lot_size || 0.1),
+        risk_percent: Number(data.risk_percent || 1),
+        entry_price: Number(data.entry_price || 0),
+        symbol: data.symbol || "XAUUSD",
+      };
 
-      // =========================
-      // 3. EMOTION ENGINE
-      // =========================
-      const emotion = detectTraderEmotion(data);
+      const result = safeAnalyze(payload);
 
-      // =========================
-      // 4. AI COACH ENGINE
-      // =========================
-      const coaching = generateRiskCoaching({
-        behavior,
-        guard,
-        emotion,
-      });
+      const response = {
+        type: "LIVE_FEEDBACK",
+        score: result.score,
+        state: result.state,
+        alerts: result.alerts,
+        context: result.context,
+        timestamp: new Date().toISOString(),
+      };
 
-      // =========================
-      // 5. UPDATE MEMORY STORE
-      // =========================
-      upsertTrader(traderId, {
-        lastSeen: new Date().toISOString(),
-        behavior,
-        guard,
-        emotion,
-      });
-
-      // =========================
-      // 6. PERSIST TO DATABASE
-      // =========================
-
-      // traders table
-      await db.from("traders").upsert({
-        id: traderId,
-        connected: true,
-        last_seen: new Date().toISOString(),
-        metadata: {
-          lastScore: behavior.score,
-          state: behavior.state,
-        },
-      });
-
-      // risk events table
-      await db.from("risk_events").insert({
-        trader_id: traderId,
-        score: behavior.score,
-        state: behavior.state,
-        alerts: behavior.alerts,
-        emotion: {
-          state: emotion.emotion,
-          score: emotion.emotionScore,
-          signals: emotion.signals,
-        },
-        guard: {
-          allowTrade: guard.allowTrade,
-          level: guard.level,
-          reason: guard.reason,
-        },
-      });
-
-      // =========================
-      // 7. RESPONSE
-      // =========================
-      connection.socket.send(
-        JSON.stringify({
-          type: "LIVE_FEEDBACK",
-          traderId,
-
-          // risk engine
-          score: behavior.score,
-          state: behavior.state,
-          alerts: behavior.alerts,
-
-          // guard system
-          guard: {
-            allowTrade: guard.allowTrade,
-            level: guard.level,
-            reason: guard.reason,
-          },
-
-          // psychology layer
-          emotion: {
-            state: emotion.emotion,
-            score: emotion.emotionScore,
-            signals: emotion.signals,
-          },
-
-          // AI coaching
-          coaching,
-
-          timestamp: new Date().toISOString(),
-        })
-      );
+      if (socket.readyState === 1) {
+        socket.send(JSON.stringify(response));
+      }
     } catch (err) {
-      connection.socket.send(
-        JSON.stringify({
-          type: "ERROR",
-          traderId,
-          message: "Invalid payload received by Risk Engine",
-          timestamp: new Date().toISOString(),
-        })
-      );
+      try {
+        socket.send(
+          JSON.stringify({
+            type: "ERROR",
+            message: "engine error recovered",
+          })
+        );
+      } catch {}
     }
   });
 
-  // ===============================
-  // CLEANUP ON DISCONNECT
-  // ===============================
-  connection.socket.on("close", async () => {
-    console.log(`🔌 Trader disconnected: ${traderId}`);
+  /* -------------------------------
+     CLEANUP
+  -------------------------------- */
+  socket.on("close", () => {
+    clearInterval(heartbeat);
+    console.log("🔌 WS DISCONNECTED");
+  });
 
-    removeTrader(traderId);
-
-    await db
-      .from("traders")
-      .update({
-        connected: false,
-        last_seen: new Date().toISOString(),
-      })
-      .eq("id", traderId);
+  socket.on("error", (err) => {
+    clearInterval(heartbeat);
+    console.log("❌ WS ERROR:", err.message);
   });
 });
 
-// ===============================
-// START SERVER
-// ===============================
-const start = async () => {
-  try {
-    const port = process.env.PORT || 4000;
+/* ===============================
+   START SERVER
+================================ */
+const PORT = process.env.PORT || 4000;
 
-    await app.listen({
-      port,
-      host: "0.0.0.0",
-    });
-
-    console.log(`🚀 RiskPilot Engine running on port ${port}`);
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
-};
-
-start();
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Risk Engine v2 CLEAN running on port ${PORT}`);
+});
