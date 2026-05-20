@@ -27,3 +27,4 @@ dist-ssr
 .vercel
 .env*.local
 api/paystack/mock-webhook.js
+.env
