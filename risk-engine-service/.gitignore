@@ -1,0 +1,8 @@
+src/v4/
+src/v4_3/
+src/v4_4/
+src/v4_5/
+../src/
+*.log
+.env
+node_modules/
