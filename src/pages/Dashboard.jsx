@@ -1,253 +1,393 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { generateShareText, copyToClipboard } from '../lib/shareReport';
+import { useEffect, useMemo, useState } from "react";
 import { useRiskLive } from "../hooks/useRiskLive";
 
-/* ── HELPERS ─────────────────────────────────────────────── */
-const fmtMoney = (n) =>
-  `$${Number(n || 0).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+export default function Dashboard() {
+  const { connected, insight } = useRiskLive();
 
-const fmtPct = (n) => `${Number(n || 0).toFixed(1)}%`;
+  const [accountBalance, setAccountBalance] = useState(10000);
+  const [riskPercent, setRiskPercent] = useState(1);
+  const [entryPrice, setEntryPrice] = useState(2650);
+  const [stopLoss, setStopLoss] = useState(2630);
+  const [takeProfit, setTakeProfit] = useState(2690);
+  const [direction, setDirection] = useState("BUY");
 
-/* ── STAT CARD ───────────────────────────────────────────── */
-function StatCard({ label, value, sub, color, icon }) {
+  const riskAmount = useMemo(() => {
+    return ((accountBalance * riskPercent) / 100).toFixed(2);
+  }, [accountBalance, riskPercent]);
+
+  const riskDistance = useMemo(() => {
+    return Math.abs(entryPrice - stopLoss);
+  }, [entryPrice, stopLoss]);
+
+  const rewardDistance = useMemo(() => {
+    return Math.abs(takeProfit - entryPrice);
+  }, [takeProfit, entryPrice]);
+
+  const rrr = useMemo(() => {
+    if (!riskDistance) return 0;
+    return (rewardDistance / riskDistance).toFixed(2);
+  }, [riskDistance, rewardDistance]);
+
+  const disciplineScore = useMemo(() => {
+    let score = 50;
+
+    if (rrr >= 2) score += 20;
+    if (riskPercent <= 2) score += 15;
+    if (riskDistance > 0) score += 10;
+
+    return Math.min(score, 100);
+  }, [rrr, riskPercent, riskDistance]);
+
+  const disciplineLabel = useMemo(() => {
+    if (disciplineScore >= 85) return "Excellent";
+    if (disciplineScore >= 70) return "Good";
+    if (disciplineScore >= 50) return "Average";
+    return "Poor";
+  }, [disciplineScore]);
+
+  const sessionName = insight?.context?.session || "New York";
+  const volatility = insight?.context?.volatility || "Medium";
+
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--radius-lg)',
-      padding: '16px 14px'
-    }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: 8
-      }}>
-        <p style={{
-          fontSize: 9,
-          fontWeight: 700,
-          color: 'var(--text-muted)',
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase'
-        }}>
-          {label}
-        </p>
-        <span>{icon}</span>
-      </div>
+    <div className="min-h-screen bg-[#050816] text-white p-5">
+      <div className="max-w-7xl mx-auto">
+        {/* HEADER */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-cyan-400">
+              RiskPilot
+            </h1>
 
-      <p style={{
-        fontSize: 20,
-        fontWeight: 700,
-        color: color || 'var(--text)'
-      }}>
-        {value}
-      </p>
-
-      {sub && (
-        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          {sub}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* ── MAIN DASHBOARD ──────────────────────────────────────── */
-export default function Dashboard({ user, isElite }) {
-  const [trades, setTrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [sharing, setSharing] = useState(false);
-  const [shared, setShared] = useState(false);
-
-  /* ── LIVE RISK ENGINE ───────────────────────────────── */
-  const { risk, connected } = useRiskLive();
-
-  /* ── FETCH TRADES ───────────────────────────────────── */
-  const fetchTrades = useCallback(async (isRefresh = false) => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    if (isRefresh) setLoading(true);
-    setError('');
-
-    try {
-      const { data, error } = await supabase
-        .from('trades')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(200);
-
-      if (error) throw error;
-      setTrades(data || []);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    fetchTrades();
-  }, [fetchTrades]);
-
-  /* ── ANALYTICS ──────────────────────────────────────── */
-  const closed = trades.filter(t => t.status === 'closed');
-  const open = trades.filter(t => t.status === 'open');
-
-  const wins = closed.filter(t => t.is_win);
-  const losses = closed.filter(t => !t.is_win);
-
-  const winRate = closed.length ? (wins.length / closed.length) * 100 : 0;
-
-  const grossProfit = wins.reduce((s, t) => s + Number(t.pnl_amount || 0), 0);
-  const grossLoss = Math.abs(losses.reduce((s, t) => s + Number(t.pnl_amount || 0), 0));
-
-  const netPnl = grossProfit - grossLoss;
-
-  const profitFactor =
-    grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 999 : 0;
-
-  const avgRisk =
-    trades.length
-      ? trades.reduce((s, t) => s + Number(t.risk_percent || 0), 0) / trades.length
-      : 0;
-
-  const disciplineAvg =
-    trades.length
-      ? trades.reduce((s, t) => s + Number(t.discipline_score || 0), 0) / trades.length
-      : 0;
-
-  /* ── SHARE ─────────────────────────────────────────── */
-  const handleShare = async () => {
-    setSharing(true);
-
-    const text = generateShareText({
-      winRate: winRate.toFixed(0),
-      netPnl: netPnl.toFixed(2),
-      tradesCount: trades.length,
-    });
-
-    const ok = await copyToClipboard(text);
-
-    if (ok) {
-      setShared(true);
-      setTimeout(() => setShared(false), 3000);
-    }
-
-    setSharing(false);
-  };
-
-  /* ── UI ─────────────────────────────────────────────── */
-  return (
-    <div style={{
-      padding: '20px 16px 110px',
-      maxWidth: 520,
-      margin: '0 auto'
-    }}>
-
-      {/* HEADER */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: 14
-      }}>
-        <div>
-          <p style={{
-            fontSize: 10,
-            letterSpacing: '0.16em',
-            color: 'var(--gold)'
-          }}>
-            PERFORMANCE
-          </p>
-          <h1>Dashboard</h1>
-        </div>
-
-        <button onClick={handleShare}>
-          {shared ? '✓ COPIED' : 'SHARE'}
-        </button>
-      </div>
-
-      {/* ── LIVE RISK ENGINE PANEL ───────────────────── */}
-      {risk && (
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 12,
-          padding: 14,
-          marginBottom: 14
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginBottom: 8
-          }}>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-              LIVE RISK ENGINE
+            <p className="text-gray-400 mt-1">
+              Institutional Trading Intelligence
             </p>
-
-            <span style={{
-              fontSize: 10,
-              color: connected ? 'green' : 'red'
-            }}>
-              {connected ? '🟢 LIVE' : '🔴 OFFLINE'}
-            </span>
           </div>
 
-          <h2>Score: {risk.score}</h2>
+          <div className="flex items-center gap-3">
+            <div
+              className={`px-4 py-2 rounded-full text-sm font-bold ${
+                connected
+                  ? "bg-green-500/20 text-green-400"
+                  : "bg-red-500/20 text-red-400"
+              }`}
+            >
+              {connected ? "AI ENGINE ONLINE" : "ENGINE OFFLINE"}
+            </div>
+          </div>
+        </div>
 
-          <p style={{
-            color:
-              risk.state === 'DANGEROUS'
-                ? 'red'
-                : risk.state === 'UNSTABLE'
-                ? 'orange'
-                : 'green'
-          }}>
-            {risk.state}
-          </p>
+        {/* LIVE AI PANEL */}
+        <div className="bg-[#0B1220] border border-cyan-500/20 rounded-3xl p-6 shadow-2xl mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-cyan-400">
+                LIVE AI RISK ENGINE
+              </h2>
 
-          {risk.alerts?.length > 0 && (
-            <ul>
-              {risk.alerts.map((a, i) => (
-                <li key={i}>⚠ {a}</li>
-              ))}
-            </ul>
+              <p className="text-gray-400 mt-1">
+                Real-time trader intelligence feed
+              </p>
+            </div>
+
+            <div
+              className={`px-4 py-2 rounded-xl font-bold ${
+                connected
+                  ? "bg-green-500/20 text-green-400"
+                  : "bg-red-500/20 text-red-400"
+              }`}
+            >
+              {connected ? "CONNECTED" : "OFFLINE"}
+            </div>
+          </div>
+
+          {!insight ? (
+            <div className="mt-6 text-gray-500">
+              Waiting for live engine signals...
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-black/30 rounded-2xl p-5 border border-white/5">
+                <p className="text-gray-400 text-sm">
+                  Stability Score
+                </p>
+
+                <h1 className="text-5xl font-bold text-cyan-400 mt-2">
+                  {insight.score}
+                </h1>
+              </div>
+
+              <div className="bg-black/30 rounded-2xl p-5 border border-white/5">
+                <p className="text-gray-400 text-sm">
+                  Market State
+                </p>
+
+                <h1 className="text-3xl font-bold text-white mt-2">
+                  {insight.state}
+                </h1>
+              </div>
+
+              <div className="bg-black/30 rounded-2xl p-5 border border-white/5">
+                <p className="text-gray-400 text-sm">
+                  Session
+                </p>
+
+                <h1 className="text-3xl font-bold text-yellow-400 mt-2">
+                  {sessionName}
+                </h1>
+              </div>
+
+              <div className="bg-black/30 rounded-2xl p-5 border border-white/5">
+                <p className="text-gray-400 text-sm">
+                  Volatility
+                </p>
+
+                <h1 className="text-3xl font-bold text-pink-400 mt-2">
+                  {volatility}
+                </h1>
+              </div>
+            </div>
           )}
         </div>
-      )}
 
-      {/* LOADING */}
-      {loading && <p>Loading...</p>}
+        {/* MAIN GRID */}
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* LEFT PANEL */}
+          <div className="bg-[#0B1220] rounded-3xl p-6 border border-white/5">
+            <h2 className="text-2xl font-bold mb-6">
+              Trade Calculator
+            </h2>
 
-      {/* ERROR */}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+            <div className="space-y-5">
+              <div>
+                <label className="text-gray-400 text-sm">
+                  Account Balance
+                </label>
 
-      {/* STATS */}
-      {!loading && trades.length > 0 && (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <StatCard label="Trades" value={trades.length} icon="📊" />
-            <StatCard label="Win Rate" value={fmtPct(winRate)} icon="🎯" />
-            <StatCard label="Net PnL" value={fmtMoney(netPnl)} icon="💰" />
-            <StatCard label="Risk Avg" value={fmtPct(avgRisk)} icon="🛡" />
+                <input
+                  type="number"
+                  value={accountBalance}
+                  onChange={(e) =>
+                    setAccountBalance(Number(e.target.value))
+                  }
+                  className="w-full mt-2 bg-black/30 border border-white/10 rounded-xl p-4 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm">
+                  Risk %
+                </label>
+
+                <input
+                  type="number"
+                  value={riskPercent}
+                  onChange={(e) =>
+                    setRiskPercent(Number(e.target.value))
+                  }
+                  className="w-full mt-2 bg-black/30 border border-white/10 rounded-xl p-4 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm">
+                  Direction
+                </label>
+
+                <select
+                  value={direction}
+                  onChange={(e) => setDirection(e.target.value)}
+                  className="w-full mt-2 bg-black/30 border border-white/10 rounded-xl p-4 outline-none"
+                >
+                  <option>BUY</option>
+                  <option>SELL</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm">
+                  Entry Price
+                </label>
+
+                <input
+                  type="number"
+                  value={entryPrice}
+                  onChange={(e) =>
+                    setEntryPrice(Number(e.target.value))
+                  }
+                  className="w-full mt-2 bg-black/30 border border-white/10 rounded-xl p-4 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm">
+                  Stop Loss
+                </label>
+
+                <input
+                  type="number"
+                  value={stopLoss}
+                  onChange={(e) =>
+                    setStopLoss(Number(e.target.value))
+                  }
+                  className="w-full mt-2 bg-black/30 border border-white/10 rounded-xl p-4 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm">
+                  Take Profit
+                </label>
+
+                <input
+                  type="number"
+                  value={takeProfit}
+                  onChange={(e) =>
+                    setTakeProfit(Number(e.target.value))
+                  }
+                  className="w-full mt-2 bg-black/30 border border-white/10 rounded-xl p-4 outline-none"
+                />
+              </div>
+            </div>
           </div>
 
-          <div style={{ marginTop: 20 }}>
-            <StatCard
-              label="Discipline"
-              value={Math.round(disciplineAvg)}
-              icon="🧠"
-            />
+          {/* RIGHT PANEL */}
+          <div className="space-y-6">
+            {/* RISK OVERVIEW */}
+            <div className="bg-[#0B1220] rounded-3xl p-6 border border-white/5">
+              <h2 className="text-2xl font-bold mb-6">
+                Risk Overview
+              </h2>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-black/30 rounded-2xl p-5">
+                  <p className="text-gray-400 text-sm">
+                    Risk Amount
+                  </p>
+
+                  <h1 className="text-3xl font-bold mt-2">
+                    ${riskAmount}
+                  </h1>
+                </div>
+
+                <div className="bg-black/30 rounded-2xl p-5">
+                  <p className="text-gray-400 text-sm">
+                    Risk Reward
+                  </p>
+
+                  <h1 className="text-3xl font-bold text-cyan-400 mt-2">
+                    {rrr}R
+                  </h1>
+                </div>
+              </div>
+            </div>
+
+            {/* DISCIPLINE */}
+            <div className="bg-[#0B1220] rounded-3xl p-6 border border-white/5">
+              <h2 className="text-2xl font-bold mb-6">
+                Discipline Intelligence
+              </h2>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-6xl font-bold text-green-400">
+                    {disciplineScore}
+                  </h1>
+
+                  <p className="text-gray-400 mt-2">
+                    {disciplineLabel}
+                  </p>
+                </div>
+
+                <div className="w-32 h-32 rounded-full border-8 border-cyan-400 flex items-center justify-center text-xl font-bold">
+                  {disciplineScore}%
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">
+                    Risk Control
+                  </span>
+
+                  <span className="text-green-400">
+                    Excellent
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">
+                    RRR Quality
+                  </span>
+
+                  <span className="text-cyan-400">
+                    Strong
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">
+                    Emotional Stability
+                  </span>
+
+                  <span className="text-yellow-400">
+                    Stable
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* MARKET INTELLIGENCE */}
+            <div className="bg-[#0B1220] rounded-3xl p-6 border border-white/5">
+              <h2 className="text-2xl font-bold mb-6">
+                Market Intelligence
+              </h2>
+
+              <div className="space-y-4">
+                <div className="bg-black/30 rounded-2xl p-4">
+                  <p className="text-gray-400 text-sm">
+                    Active Session
+                  </p>
+
+                  <h1 className="text-2xl font-bold text-yellow-400 mt-2">
+                    {sessionName}
+                  </h1>
+                </div>
+
+                <div className="bg-black/30 rounded-2xl p-4">
+                  <p className="text-gray-400 text-sm">
+                    Market Volatility
+                  </p>
+
+                  <h1 className="text-2xl font-bold text-pink-400 mt-2">
+                    {volatility}
+                  </h1>
+                </div>
+
+                <div className="bg-black/30 rounded-2xl p-4">
+                  <p className="text-gray-400 text-sm">
+                    AI Alerts
+                  </p>
+
+                  <ul className="mt-3 space-y-2">
+                    {insight?.alerts?.map((alert, idx) => (
+                      <li
+                        key={idx}
+                        className="text-sm text-gray-300"
+                      >
+                        • {alert}
+                      </li>
+                    )) || (
+                      <li className="text-gray-500">
+                        No active alerts
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
